@@ -1,2 +1,2 @@
-DROP TABLE Persona
+drop table Persona
 GO

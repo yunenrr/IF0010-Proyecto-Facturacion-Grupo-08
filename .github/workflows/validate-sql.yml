@@ -1,0 +1,80 @@
+name: Validar Scripts SQL (Calidad y Ejecución)
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Job 1: Análisis estático de estándares y buenas prácticas
+  lint-sql:
+    name: Analizar Estándares (SQLFluff)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar el código del PR
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar SQLFluff
+        run: |
+          pip install --upgrade pip
+          pip install sqlfluff sqlfluff-templater-dbt
+
+      - name: Ejecutar linter con anotaciones en GitHub
+        run: |
+          sqlfluff lint scripts/ --dialect tsql --format github-annotation-native
+
+  # Job 2: Prueba funcional levantando SQL Server (Solo corre si el lint pasa)
+  validate-sql:
+    name: Probar Ejecución en SQL Server
+    needs: lint-sql
+    runs-on: ubuntu-latest
+
+    services:
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: 'Y'
+          MSSQL_SA_PASSWORD: 'PasswordProfesor123!'
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'PasswordProfesor123!' -C -Q 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Descargar el código del PR
+        uses: actions/checkout@v4
+
+      - name: Instalar sqlcmd (vía .NET Tool)
+        run: |
+          dotnet tool install --global Microsoft.SqlServer.SqlCmd
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
+      - name: Crear BD de prueba y Ejecutar scripts .sql
+        run: |
+          sqlcmd -S localhost -U sa -P 'PasswordProfesor123!' -C -Q "CREATE DATABASE TestDB;"
+
+          find scripts -type f -name "*.sql" | sort -V | while read -r file; do
+            echo "--------------------------------------------------"
+            echo "Ejecutando: $file"
+            echo "--------------------------------------------------"
+            
+            sqlcmd -S localhost -U sa -P 'PasswordProfesor123!' -C -d TestDB -b -i "$file"
+            
+            if [ $? -ne 0 ]; then
+              echo "Error crítico en el archivo: $file"
+              exit 1
+            fi
+          done

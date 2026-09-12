@@ -51,8 +51,5 @@ IF OBJECT_ID(N'dbo.auditoria_evento', N'U') IS NULL
             CONSTRAINT [CK_auditoria_evento_descripcion_no_vacia]
             CHECK (LTRIM(RTRIM(descripcion_cambios)) <> N'')
         );
-
-    -- Los identificadores auditados no son llaves foraneas intencionalmente.
-    -- El evento debe permanecer aunque el registro original sea eliminado.
     END;
 GO

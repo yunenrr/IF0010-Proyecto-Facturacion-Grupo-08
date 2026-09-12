@@ -3,9 +3,9 @@ USE master;
 GO
 
 IF DB_ID(N'facturacion') IS NULL
-BEGIN
-    EXEC(N'CREATE DATABASE facturacion;');
-END;
+    BEGIN
+        EXEC (N'CREATE DATABASE facturacion;');
+    END;
 GO
 
 USE facturacion;

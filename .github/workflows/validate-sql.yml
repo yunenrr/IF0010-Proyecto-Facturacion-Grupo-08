@@ -2,12 +2,14 @@ name: Validar Scripts SQL (Calidad y Ejecución)
 
 on:
   pull_request:
+    branches:
+      - main
     types: [opened, reopened]
     paths:
       - 'scripts/**'
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -19,6 +21,8 @@ jobs:
     steps:
       - name: Descargar el código del PR
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Configurar Python
         uses: actions/setup-python@v5
@@ -57,6 +61,8 @@ jobs:
     steps:
       - name: Descargar el código del PR
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Instalar sqlcmd (mssql-tools18)
         run: |

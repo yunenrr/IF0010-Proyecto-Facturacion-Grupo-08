@@ -1,10 +1,6 @@
 USE facturacion;
 GO
 
-SET NOCOUNT ON;
-SET XACT_ABORT ON;
-GO
-
 IF OBJECT_ID(N'dbo.empresa_emisora', N'U') IS NULL
     BEGIN
         CREATE TABLE dbo.empresa_emisora
@@ -24,22 +20,20 @@ IF OBJECT_ID(N'dbo.empresa_emisora', N'U') IS NULL
             CONSTRAINT [DF_empresa_emisora_activo] DEFAULT (1),
 
             CONSTRAINT [PK_empresa_emisora]
-            PRIMARY KEY CLUSTERED (id_empresa),
-            CONSTRAINT [UQ_empresa_emisora_direccion]
-            UNIQUE NONCLUSTERED (id_direccion),
+            PRIMARY KEY (id_empresa),
             CONSTRAINT [FK_empresa_emisora_direccion]
             FOREIGN KEY (id_direccion)
             REFERENCES dbo.direccion (id_direccion),
             CONSTRAINT [CK_empresa_emisora_cedula_no_vacia]
-            CHECK (LTRIM(RTRIM(cedula)) <> ''),
+            CHECK (TRIM(cedula) <> ''),
             CONSTRAINT [CK_empresa_emisora_nombre_no_vacio]
-            CHECK (LTRIM(RTRIM(nombre_comercial)) <> N''),
+            CHECK (TRIM(nombre_comercial) <> N''),
             CONSTRAINT [CK_empresa_emisora_razon_no_vacia]
-            CHECK (LTRIM(RTRIM(razon_social)) <> N''),
+            CHECK (TRIM(razon_social) <> N''),
             CONSTRAINT [CK_empresa_emisora_telefono_no_vacio]
-            CHECK (LTRIM(RTRIM(telefono)) <> ''),
+            CHECK (TRIM(telefono) <> ''),
             CONSTRAINT [CK_empresa_emisora_correo_no_vacio]
-            CHECK (LTRIM(RTRIM(correo_electronico)) <> '')
+            CHECK (TRIM(correo_electronico) <> '')
         );
     END;
 GO

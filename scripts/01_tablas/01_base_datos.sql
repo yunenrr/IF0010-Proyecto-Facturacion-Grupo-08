@@ -4,7 +4,7 @@ GO
 
 IF DB_ID(N'facturacion') IS NULL
     BEGIN
-        EXEC (N'CREATE DATABASE facturacion;');
+        CREATE DATABASE facturacion;
     END;
 GO
 

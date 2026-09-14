@@ -1,19 +1,6 @@
 USE facturacion;
 GO
 
-SET ANSI_NULLS ON;
-SET ANSI_PADDING ON;
-SET ANSI_WARNINGS ON;
-SET ARITHABORT ON;
-SET CONCAT_NULL_YIELDS_NULL ON;
-SET QUOTED_IDENTIFIER ON;
-SET NUMERIC_ROUNDABORT OFF;
-GO
-
-SET NOCOUNT ON;
-SET XACT_ABORT ON;
-GO
-
 IF OBJECT_ID(N'dbo.factura', N'U') IS NULL
     BEGIN
         CREATE TABLE dbo.factura
@@ -31,11 +18,7 @@ IF OBJECT_ID(N'dbo.factura', N'U') IS NULL
             CONSTRAINT [DF_factura_total_descuentos] DEFAULT (0),
             total_impuestos DECIMAL(19, 4) NOT NULL
             CONSTRAINT [DF_factura_total_impuestos] DEFAULT (0),
-            monto_total AS
-            CONVERT(
-                DECIMAL(19, 4), subtotal - total_descuentos + total_impuestos
-            )
-            PERSISTED,
+            monto_total DECIMAL(19, 4) NOT NULL,
             observaciones NVARCHAR(1000) NULL,
             fecha_creacion DATETIME2(7) NOT NULL
             CONSTRAINT [DF_factura_fecha_creacion] DEFAULT (SYSDATETIME()),
@@ -43,7 +26,7 @@ IF OBJECT_ID(N'dbo.factura', N'U') IS NULL
             CONSTRAINT [DF_factura_fecha_modificacion] DEFAULT (SYSDATETIME()),
 
             CONSTRAINT [PK_factura]
-            PRIMARY KEY CLUSTERED (id_factura),
+            PRIMARY KEY (id_factura),
             CONSTRAINT [FK_factura_empresa_emisora]
             FOREIGN KEY (id_empresa)
             REFERENCES dbo.empresa_emisora (id_empresa),
@@ -59,17 +42,8 @@ IF OBJECT_ID(N'dbo.factura', N'U') IS NULL
             CONSTRAINT [FK_factura_estado]
             FOREIGN KEY (codigo_estado)
             REFERENCES dbo.estado_factura (codigo_estado),
-            CONSTRAINT [CK_factura_identificador_formato]
-            CHECK
-            (
-                LEN(identificador_comprobante) = 15 + LEN(codigo_tipo_documento)
-                AND SUBSTRING(identificador_comprobante, 15, 1) = '-'
-                AND LEFT(identificador_comprobante, 14) NOT LIKE '%[^0-9]%'
-                AND RIGHT(identificador_comprobante, LEN(codigo_tipo_documento))
-                = codigo_tipo_documento
-            ),
-            CONSTRAINT [CK_factura_subtotal_no_negativo]
-            CHECK (subtotal >= 0),
+            CONSTRAINT [CK_factura_subtotal_positivo]
+            CHECK (subtotal > 0),
             CONSTRAINT [CK_factura_descuentos]
             CHECK (total_descuentos >= 0 AND total_descuentos <= subtotal),
             CONSTRAINT [CK_factura_impuestos_no_negativos]

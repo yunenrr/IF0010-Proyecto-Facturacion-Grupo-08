@@ -1,10 +1,6 @@
 USE facturacion;
 GO
 
-SET NOCOUNT ON;
-SET XACT_ABORT ON;
-GO
-
 IF OBJECT_ID(N'dbo.auditoria_evento', N'U') IS NULL
     BEGIN
         CREATE TABLE dbo.auditoria_evento
@@ -21,7 +17,7 @@ IF OBJECT_ID(N'dbo.auditoria_evento', N'U') IS NULL
             descripcion_cambios NVARCHAR(2000) NOT NULL,
 
             CONSTRAINT [PK_auditoria_evento]
-            PRIMARY KEY CLUSTERED (id_evento),
+            PRIMARY KEY (id_evento),
             CONSTRAINT [CK_auditoria_evento_entidad]
             CHECK
             (
@@ -30,7 +26,9 @@ IF OBJECT_ID(N'dbo.auditoria_evento', N'U') IS NULL
                     'FACTURA',
                     'DETALLE_FACTURA',
                     'CLIENTE',
-                    'PRODUCTO_SERVICIO'
+                    'PRODUCTO_SERVICIO',
+                    'PRODUCTO',
+                    'SERVICIO'
                 )
             ),
             CONSTRAINT [CK_auditoria_evento_operacion]
@@ -49,7 +47,7 @@ IF OBJECT_ID(N'dbo.auditoria_evento', N'U') IS NULL
                 )
             ),
             CONSTRAINT [CK_auditoria_evento_descripcion_no_vacia]
-            CHECK (LTRIM(RTRIM(descripcion_cambios)) <> N'')
+            CHECK (TRIM(descripcion_cambios) <> N'')
         );
     END;
 GO

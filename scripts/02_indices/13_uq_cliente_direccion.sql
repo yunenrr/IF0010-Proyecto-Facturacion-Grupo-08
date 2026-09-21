@@ -1,0 +1,20 @@
+USE facturacion;
+GO
+
+-- La restriccion UNIQUE y su indice se crean en la carpeta de indices.
+IF
+    NOT EXISTS
+    (
+        SELECT 1
+        FROM sys.key_constraints
+        WHERE
+            name = N'UQ_cliente_direccion'
+            AND parent_object_id = OBJECT_ID(N'dbo.cliente')
+            AND type = 'UQ'
+    )
+    BEGIN
+        ALTER TABLE dbo.cliente
+        ADD CONSTRAINT [UQ_cliente_direccion]
+        UNIQUE NONCLUSTERED (id_direccion);
+    END;
+GO

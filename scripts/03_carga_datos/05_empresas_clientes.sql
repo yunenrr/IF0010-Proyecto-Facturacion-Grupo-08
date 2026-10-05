@@ -32,7 +32,7 @@ BEGIN
             SELECT valor
             FROM
                 (VALUES (0), (1), (2), (3), (4), (5), (6), (7), (8), (9))
-                    AS d (valor)
+                    AS d(valor)
         )
 
         SELECT
@@ -106,7 +106,7 @@ BEGIN
             (37, N'Manuel'),
             (38, N'Francisco'),
             (39, N'Roberto')
-        ) AS v (numero, texto);
+        ) AS v(numero, texto);
 
         SELECT
             v.numero,
@@ -154,7 +154,7 @@ BEGIN
             (37, N'Esquivel'),
             (38, N'Zamora'),
             (39, N'Acosta')
-        ) AS v (numero, texto);
+        ) AS v(numero, texto);
 
         SELECT
             v.numero,
@@ -182,7 +182,7 @@ BEGIN
             (17, N'Asesorías'),
             (18, N'Diseños'),
             (19, N'Comunicaciones')
-        ) AS v (numero, texto);
+        ) AS v(numero, texto);
 
         SELECT
             v.numero,
@@ -210,7 +210,7 @@ BEGIN
             (17, N'Mariposa'),
             (18, N'Quetzal'),
             (19, N'Colibrí')
-        ) AS v (numero, texto);
+        ) AS v(numero, texto);
 
         SELECT
             v.numero,
@@ -243,7 +243,7 @@ BEGIN
             (22, N'de la Amistad'),
             (23, N'del Progreso'),
             (24, N'de la Concordia')
-        ) AS v (numero, texto);
+        ) AS v(numero, texto);
 
         SELECT
             v.numero,
@@ -261,7 +261,7 @@ BEGIN
             (7, N'Los Cipreses'),
             (8, N'Los Mangos'),
             (9, N'Las Orquídeas')
-        ) AS v (numero, texto);
+        ) AS v(numero, texto);
 
         SELECT
             v.numero,
@@ -279,7 +279,7 @@ BEGIN
             (7, N'centro cultural'),
             (8, N'estación de autobuses'),
             (9, N'centro de salud')
-        ) AS v (numero, texto);
+        ) AS v(numero, texto);
 
         SELECT
             n.numero,

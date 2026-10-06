@@ -39,13 +39,12 @@ BEGIN
             )
             THROW 50002, 'Una linea contiene valores invalidos.', 1;
         IF
-            (SELECT MIN(numero_linea) FROM @detalles) <> 1
-            OR (SELECT MAX(numero_linea) FROM @detalles)
-            <> (SELECT COUNT(*) FROM @detalles)
-            OR EXISTS (
-                SELECT numero_linea FROM @detalles
-                GROUP BY numero_linea
-                HAVING COUNT(*) > 1
+            EXISTS (
+                SELECT 1 FROM @detalles
+                HAVING
+                    MIN(numero_linea) <> 1
+                    OR MAX(numero_linea) <> COUNT(*)
+                    OR COUNT(DISTINCT numero_linea) <> COUNT(*)
             )
             THROW 50003,
             'Las lineas deben ser consecutivas y no repetidas.',

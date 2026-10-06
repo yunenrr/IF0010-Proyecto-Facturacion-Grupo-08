@@ -145,7 +145,6 @@ BEGIN
 
         SELECT
             n.numero,
-            CAST('PRODUCTO' AS VARCHAR(8)) AS tipo_producto_servicio,
             CONCAT(t.texto, N', marca ', m.texto, N', ', v.texto) AS descripcion
         INTO #semilla_catalogo
         FROM #numeros AS n
@@ -156,7 +155,6 @@ BEGIN
         UNION ALL
         SELECT
             n.numero,
-            'SERVICIO' AS tipo_producto_servicio,
             CONCAT(t.texto, N', ', m.texto) AS descripcion
         FROM #numeros AS n
         INNER JOIN #tipos_servicio AS t ON t.numero = (n.numero - 1001) % 20

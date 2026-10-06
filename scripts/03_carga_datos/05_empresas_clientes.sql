@@ -360,7 +360,7 @@ BEGIN
             n.senas_exactas
         FROM #semilla_empresas AS n
         INNER JOIN #geografia AS g ON g.numero = (n.numero * 47) % 475 + 1
-        WHERE n.numero <= 100 AND NOT EXISTS (
+        WHERE NOT EXISTS (
             SELECT 1 FROM dbo.empresa_emisora AS e
             WHERE
                 e.cedula
@@ -384,8 +384,7 @@ BEGIN
             1 AS activo
         FROM #semilla_empresas AS n
         INNER JOIN #direcciones AS d
-            ON n.senas_exactas = d.senas_exactas
-        WHERE n.numero <= 100;
+            ON n.senas_exactas = d.senas_exactas;
 
         DELETE FROM #direcciones;
 

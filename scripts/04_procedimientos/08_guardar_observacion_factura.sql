@@ -42,14 +42,9 @@ BEGIN
                 INSERT INTO dbo.observacion (texto) VALUES (TRIM(@texto));
                 SET @id_observacion = SCOPE_IDENTITY();
             END;
-        IF
-            EXISTS (
-                SELECT 1 FROM dbo.factura_observacion
-                WHERE id_factura = @id_factura
-            )
-            UPDATE dbo.factura_observacion SET id_observacion = @id_observacion
-            WHERE id_factura = @id_factura;
-        ELSE
+        UPDATE dbo.factura_observacion SET id_observacion = @id_observacion
+        WHERE id_factura = @id_factura;
+        IF @@ROWCOUNT = 0
             INSERT INTO dbo.factura_observacion (id_factura, id_observacion)
             VALUES (@id_factura, @id_observacion);
 

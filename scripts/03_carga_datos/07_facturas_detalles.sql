@@ -163,12 +163,8 @@ BEGIN
                     p.id_moneda,
                     p.id_estado,
                     p.fecha_emision,
-                    CONCAT(
-                        CONVERT(CHAR(8), p.fecha_emision, 112),
-                        REPLACE(
-                            CONVERT(CHAR(8), p.fecha_emision, 108), ':', ''
-                        ),
-                        '-', t.codigo_tipo_documento
+                    dbo.generar_clave_comprobante(
+                        p.fecha_emision, t.codigo_tipo_documento
                     ) AS comprobante
                 INTO #cabeceras FROM #plan AS p
                 INNER JOIN

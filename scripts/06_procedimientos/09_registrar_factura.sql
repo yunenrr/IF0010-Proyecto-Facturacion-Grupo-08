@@ -141,9 +141,8 @@ BEGIN
             )) AS monto_impuesto
         INTO #lineas FROM #bases AS b;
         SET @fecha_emision = COALESCE(@fecha_emision, SYSDATETIME());
-        SET @identificador_comprobante = CONCAT(
-            CONVERT(CHAR(8), @fecha_emision, 112),
-            REPLACE(CONVERT(CHAR(8), @fecha_emision, 108), ':', ''), '-', @tipo
+        SET @identificador_comprobante = dbo.generar_clave_comprobante(
+            @fecha_emision, @tipo
         );
         IF
             EXISTS (

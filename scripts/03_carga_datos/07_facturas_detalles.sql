@@ -35,7 +35,7 @@ BEGIN
             SELECT d.valor
             FROM
                 (VALUES (0), (1), (2), (3), (4), (5), (6), (7), (8), (9))
-                    AS d (valor)
+                    AS d(valor)
         )
 
         SELECT
@@ -185,7 +185,7 @@ BEGIN
                         * p.precio_unitario_lista AS DECIMAL(19, 4)
                     ) AS subtotal_linea
                 INTO #bases FROM #cabeceras AS c
-                CROSS JOIN (VALUES (1), (2), (3), (4), (5)) AS l (numero_linea)
+                CROSS JOIN (VALUES (1), (2), (3), (4), (5)) AS l(numero_linea)
                 INNER JOIN
                     #catalogo AS p
                     ON

@@ -24,7 +24,7 @@ BEGIN
             SELECT valor
             FROM
                 (VALUES (0), (1), (2), (3), (4), (5), (6), (7), (8), (9))
-                    AS d(valor)
+                    AS d (valor)
         )
 
         SELECT
@@ -70,7 +70,7 @@ BEGIN
             (22, N'Pincel plano para manualidades'),
             (23, N'Papel fotográfico tamaño carta'),
             (24, N'Cartulina blanca tamaño oficio')
-        ) AS v(numero, texto);
+        ) AS v (numero, texto);
 
         SELECT
             v.numero,
@@ -82,7 +82,7 @@ BEGIN
             (1, N'Alborada'),
             (2, N'Horizonte'),
             (3, N'Azahar')
-        ) AS v(numero, texto);
+        ) AS v (numero, texto);
 
         SELECT
             v.numero,
@@ -100,7 +100,7 @@ BEGIN
             (7, N'paquete de 10 unidades'),
             (8, N'paquete de 12 unidades'),
             (9, N'caja de 24 unidades')
-        ) AS v(numero, texto);
+        ) AS v (numero, texto);
 
         SELECT
             v.numero,
@@ -128,7 +128,7 @@ BEGIN
             (17, N'Diseño de formularios internos'),
             (18, N'Configuración de firma de correo'),
             (19, N'Capacitación en herramientas colaborativas')
-        ) AS v(numero, texto);
+        ) AS v (numero, texto);
 
         SELECT
             v.numero,
@@ -141,7 +141,7 @@ BEGIN
             (2, N'taller de dos horas'),
             (3, N'taller grupal de cuatro horas'),
             (4, N'jornada de ocho horas')
-        ) AS v(numero, texto);
+        ) AS v (numero, texto);
 
         SELECT
             n.numero,

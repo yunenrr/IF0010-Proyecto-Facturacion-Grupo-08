@@ -1,8 +1,7 @@
 USE facturacion;
 GO
 
-CREATE OR ALTER FUNCTION dbo.calcular_monto_final_factura
-(
+CREATE OR ALTER FUNCTION dbo.calcular_monto_final_factura(
     @id_factura BIGINT
 )
 RETURNS DECIMAL(19, 4)

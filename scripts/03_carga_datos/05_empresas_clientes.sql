@@ -300,10 +300,14 @@ BEGIN
 
         SELECT
             n.numero,
+            ap.texto AS primer_apellido,
+            sp.texto AS segundo_apellido,
             CASE
                 WHEN n.numero % 5 <> 0
                     THEN CONCAT(np.texto, N' ', ap.texto, N' ', sp.texto)
             END AS nombre_persona,
+            CONCAT(a.texto, N' ', m.texto, N' ', l.texto)
+                AS nombre_comercial,
             CASE
                 WHEN n.numero % 5 = 0
                     THEN CONCAT(a.texto, N' ', m.texto, N' ', l.texto, N' S.A.')
@@ -434,19 +438,24 @@ BEGIN
                 n.senas_exactas
                 = d.senas_exactas;
 
-        INSERT INTO dbo.persona_fisica (id_cliente, nombre_persona)
+        INSERT INTO dbo.persona_fisica
+        (id_cliente, nombre_persona, primer_apellido, segundo_apellido)
         SELECT
             c.id_cliente,
-            n.nombre_persona
+            n.nombre_persona,
+            n.primer_apellido,
+            n.segundo_apellido
         FROM #semilla_clientes AS n
         INNER JOIN
             dbo.cliente AS c
             ON c.cedula = CAST(100000000 + n.numero AS VARCHAR(20))
         WHERE n.numero % 5 <> 0;
-        INSERT INTO dbo.persona_juridica (id_cliente, razon_social)
+        INSERT INTO dbo.persona_juridica
+        (id_cliente, razon_social, nombre_comercial)
         SELECT
             c.id_cliente,
-            n.razon_social
+            n.razon_social,
+            n.nombre_comercial
         FROM #semilla_clientes AS n
         INNER JOIN
             dbo.cliente AS c

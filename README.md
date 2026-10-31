@@ -2,7 +2,7 @@
 
 ## Descripción general
 
-Base de datos en SQL Server para administrar empresas emisoras, clientes, productos, servicios y facturas. Incluye las tablas, la carga inicial de datos, los índices, los procedimientos almacenados, las funciones y las vistas.
+Base de datos en SQL Server para administrar empresas emisoras, clientes, productos, servicios y facturas. Incluye las tablas, la carga inicial de datos, los índices, los procedimientos almacenados, las funciones, las vistas y los triggers de auditoría.
 
 ## Integrantes del grupo
 
@@ -30,16 +30,24 @@ Dentro de `scripts`, ejecute las carpetas en este orden y los archivos de cada c
 6. `06_procedimientos`: crea los procedimientos almacenados.
 7. `07_roles`: crea los roles y asigna permisos sobre las funciones.
 8. `08_vistas`: crea las vistas.
-9. `09_consultas`: contiene las consultas de demostración; ejecútelas como `dbo` después de instalar el proyecto.
+9. `09_triggers`: crea los triggers de auditoría después de la carga inicial.
+10. `10_consultas`: contiene las consultas de clientes y facturas y las demostraciones de permisos. Se ejecutan por separado después de instalar el proyecto.
 
 Ejecute cada archivo completo en SQL Server Management Studio. Si aparece un error, revíselo antes de continuar.
-
-La consulta `01_demostrar_historial_por_rol.sql` muestra un registro para Auditor, uno para DBA y cero para un usuario sin esos roles. Sus usuarios y datos de demostración se deshacen al terminar. El instalador personal incluye hasta `08_vistas`; las demostraciones se ejecutan por separado.
-
-La consulta `02_demostrar_clientes_por_rol.sql` consulta un cliente físico y uno jurídico: Administrativo ve los datos completos; Cajero y Consulta ven teléfono y correo como `NULL`; un usuario sin esos roles no obtiene filas. Los usuarios de demostración se deshacen al terminar.
-
-## Notas importantes
 
 - Para instalar el proyecto, la base `facturacion` debe estar nueva y vacía. El primer script la crea si no existe.
 - Si ya ejecutó la instalación y desea repetirla desde cero, elimine primero la base `facturacion`. Esto borra todos sus datos; guarde antes lo que necesite conservar.
 
+## Consultas
+
+Los archivos `01` y `02` de `10_consultas` demuestran los permisos por rol. Deben ejecutarse como `dbo` y revierten sus usuarios y datos de prueba al finalizar. Auditor y DBA pueden consultar el historial; Administrativo puede consultar los datos completos de clientes, mientras que Cajero y Consulta reciben teléfono y correo como `NULL`.
+
+Las consultas `03` a `10` permiten buscar clientes y consultar sus facturas y totales. Los parámetros se modifican al inicio de cada archivo. Las búsquedas por nombre, razón social y nombre comercial coinciden desde el inicio del texto; los apellidos se comparan completos. El resumen anual utiliza el año del servidor y el rango de fechas incluye ambos días.
+
+## Registro de clientes
+
+En `registrar_cliente`, el parámetro `@nombre` recibe el nombre completo para personas físicas o la razón social para personas jurídicas. Indique también `@primer_apellido` y `@segundo_apellido` para una persona física, o `@nombre_comercial` para una jurídica.
+
+## Auditoría
+
+Los triggers registran inserciones, modificaciones y eliminaciones de clientes, direcciones, productos, servicios y facturas. Guardan la operación, el usuario, la fecha y los valores anteriores y nuevos. Los registros de auditoría se revierten junto con la transacción. Los cambios únicamente de mayúsculas o espacios finales pueden no registrarse.

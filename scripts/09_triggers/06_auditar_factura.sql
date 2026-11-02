@@ -8,14 +8,172 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    IF NOT EXISTS (SELECT 1 FROM deleted)
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM inserted) RETURN;
+            BEGIN TRY
+                BEGIN TRANSACTION;
+                DECLARE @usuario_insert INT;
+                DECLARE @nombre_insert VARCHAR(128) = ORIGINAL_LOGIN();
+                DECLARE @fecha_insert DATETIME2(7) = SYSDATETIME();
+                SELECT @usuario_insert = id_usuario
+                FROM dbo.usuario_auditoria WITH (UPDLOCK, HOLDLOCK)
+                WHERE nombre = @nombre_insert;
+                IF @usuario_insert IS NULL
+                    BEGIN
+                        INSERT INTO dbo.usuario_auditoria (nombre)
+                        VALUES (@nombre_insert);
+                        SET @usuario_insert = SCOPE_IDENTITY();
+                    END;
+                DECLARE @eventos_insert TABLE (
+                    id_evento BIGINT NOT NULL,
+                    id_registro BIGINT NOT NULL PRIMARY KEY
+                );
+                SELECT
+                    id_factura,
+                    identificador_comprobante,
+                    id_empresa,
+                    id_cliente,
+                    id_tipo_documento,
+                    id_moneda,
+                    id_estado,
+                    fecha_emision,
+                    subtotal,
+                    total_descuentos,
+                    total_impuestos,
+                    monto_total,
+                    fecha_creacion,
+                    fecha_modificacion
+                INTO #facturas_insertadas FROM inserted;
+                CREATE UNIQUE CLUSTERED INDEX ix_facturas_insertadas
+                    ON #facturas_insertadas (id_factura);
+                INSERT INTO dbo.auditoria_evento (
+                    id_entidad, id_registro_principal, id_operacion,
+                    id_usuario, fecha_hora_cambio
+                )
+                OUTPUT INSERTED.id_evento, INSERTED.id_registro_principal
+                INTO @eventos_insert
+                SELECT
+                    1 AS id_entidad,
+                    i.id_factura,
+                    1 AS id_operacion,
+                    @usuario_insert AS id_usuario,
+                    @fecha_insert AS fecha_hora_cambio
+                FROM #facturas_insertadas AS i;
+                WITH valores_insert AS (
+                    SELECT
+                        i.id_factura,
+                        'identificador_comprobante' AS campo,
+                        CONVERT(VARCHAR(64), i.identificador_comprobante)
+                            AS valor
+                    FROM #facturas_insertadas AS i
+                    UNION ALL
+                    SELECT
+                        i.id_factura,
+                        'id_empresa' AS campo,
+                        CONVERT(VARCHAR(64), i.id_empresa) AS valor
+                    FROM #facturas_insertadas AS i
+                    UNION ALL
+                    SELECT
+                        i.id_factura,
+                        'id_cliente' AS campo,
+                        CONVERT(VARCHAR(64), i.id_cliente) AS valor
+                    FROM #facturas_insertadas AS i
+                    UNION ALL
+                    SELECT
+                        i.id_factura,
+                        'id_tipo_documento' AS campo,
+                        CONVERT(VARCHAR(64), i.id_tipo_documento) AS valor
+                    FROM #facturas_insertadas AS i
+                    UNION ALL
+                    SELECT
+                        i.id_factura,
+                        'id_moneda' AS campo,
+                        CONVERT(VARCHAR(64), i.id_moneda) AS valor
+                    FROM #facturas_insertadas AS i
+                    UNION ALL
+                    SELECT
+                        i.id_factura,
+                        'id_estado' AS campo,
+                        CONVERT(VARCHAR(64), i.id_estado) AS valor
+                    FROM #facturas_insertadas AS i
+                    UNION ALL
+                    SELECT
+                        i.id_factura,
+                        'fecha_emision' AS campo,
+                        CONVERT(VARCHAR(64), i.fecha_emision) AS valor
+                    FROM #facturas_insertadas AS i
+                    UNION ALL
+                    SELECT
+                        i.id_factura,
+                        'subtotal' AS campo,
+                        CONVERT(VARCHAR(64), i.subtotal) AS valor
+                    FROM #facturas_insertadas AS i
+                    UNION ALL
+                    SELECT
+                        i.id_factura,
+                        'total_descuentos' AS campo,
+                        CONVERT(VARCHAR(64), i.total_descuentos) AS valor
+                    FROM #facturas_insertadas AS i
+                    UNION ALL
+                    SELECT
+                        i.id_factura,
+                        'total_impuestos' AS campo,
+                        CONVERT(VARCHAR(64), i.total_impuestos) AS valor
+                    FROM #facturas_insertadas AS i
+                    UNION ALL
+                    SELECT
+                        i.id_factura,
+                        'monto_total' AS campo,
+                        CONVERT(VARCHAR(64), i.monto_total) AS valor
+                    FROM #facturas_insertadas AS i
+                    UNION ALL
+                    SELECT
+                        i.id_factura,
+                        'fecha_creacion' AS campo,
+                        CONVERT(VARCHAR(64), i.fecha_creacion) AS valor
+                    FROM #facturas_insertadas AS i
+                    UNION ALL
+                    SELECT
+                        i.id_factura,
+                        'fecha_modificacion' AS campo,
+                        CONVERT(VARCHAR(64), i.fecha_modificacion) AS valor
+                    FROM #facturas_insertadas AS i
+                )
+
+                INSERT INTO dbo.auditoria_valor (
+                    id_evento, id_campo, id_momento, valor
+                )
+                SELECT
+                    e.id_evento,
+                    a.id_campo,
+                    2 AS id_momento,
+                    v.valor
+                FROM valores_insert AS v
+                INNER JOIN @eventos_insert AS e ON v.id_factura = e.id_registro
+                INNER JOIN dbo.campo_auditoria AS a
+                    ON a.id_entidad = 1 AND v.campo = a.nombre;
+                COMMIT TRANSACTION;
+            END TRY
+            BEGIN CATCH
+                IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+                DECLARE @error_insert VARCHAR(2048) = ERROR_MESSAGE();
+                RAISERROR (
+                    'Error al auditar factura: %s', 16, 1, @error_insert
+                );
+            END CATCH;
+            RETURN;
+        END;
+
     DECLARE
         @cambios TABLE
         (
             id_registro BIGINT NOT NULL,
             id_operacion INT NOT NULL,
-            campo VARCHAR(128) NOT NULL,
-            anterior VARCHAR(4000) NULL,
-            nuevo VARCHAR(4000) NULL
+            campo VARCHAR(64) NOT NULL,
+            anterior VARCHAR(64) NULL,
+            nuevo VARCHAR(64) NULL,
+            PRIMARY KEY (id_registro, campo)
         );
 
     WITH registros AS (
@@ -25,43 +183,43 @@ BEGIN
                 WHEN d.id_factura IS NULL THEN 1
                 WHEN i.id_factura IS NULL THEN 3 ELSE 2
             END AS id_operacion,
-            CONVERT(VARCHAR(4000), d.identificador_comprobante)
+            CONVERT(VARCHAR(64), d.identificador_comprobante)
                 AS identificador_comprobante_anterior,
-            CONVERT(VARCHAR(4000), i.identificador_comprobante)
+            CONVERT(VARCHAR(64), i.identificador_comprobante)
                 AS identificador_comprobante_nuevo,
-            CONVERT(VARCHAR(4000), d.id_empresa) AS id_empresa_anterior,
-            CONVERT(VARCHAR(4000), i.id_empresa) AS id_empresa_nuevo,
-            CONVERT(VARCHAR(4000), d.id_cliente) AS id_cliente_anterior,
-            CONVERT(VARCHAR(4000), i.id_cliente) AS id_cliente_nuevo,
-            CONVERT(VARCHAR(4000), d.id_tipo_documento)
+            CONVERT(VARCHAR(64), d.id_empresa) AS id_empresa_anterior,
+            CONVERT(VARCHAR(64), i.id_empresa) AS id_empresa_nuevo,
+            CONVERT(VARCHAR(64), d.id_cliente) AS id_cliente_anterior,
+            CONVERT(VARCHAR(64), i.id_cliente) AS id_cliente_nuevo,
+            CONVERT(VARCHAR(64), d.id_tipo_documento)
                 AS id_tipo_documento_anterior,
-            CONVERT(VARCHAR(4000), i.id_tipo_documento)
+            CONVERT(VARCHAR(64), i.id_tipo_documento)
                 AS id_tipo_documento_nuevo,
-            CONVERT(VARCHAR(4000), d.id_moneda) AS id_moneda_anterior,
-            CONVERT(VARCHAR(4000), i.id_moneda) AS id_moneda_nuevo,
-            CONVERT(VARCHAR(4000), d.id_estado) AS id_estado_anterior,
-            CONVERT(VARCHAR(4000), i.id_estado) AS id_estado_nuevo,
-            CONVERT(VARCHAR(4000), d.fecha_emision, 126)
+            CONVERT(VARCHAR(64), d.id_moneda) AS id_moneda_anterior,
+            CONVERT(VARCHAR(64), i.id_moneda) AS id_moneda_nuevo,
+            CONVERT(VARCHAR(64), d.id_estado) AS id_estado_anterior,
+            CONVERT(VARCHAR(64), i.id_estado) AS id_estado_nuevo,
+            CONVERT(VARCHAR(64), d.fecha_emision, 126)
                 AS fecha_emision_anterior,
-            CONVERT(VARCHAR(4000), i.fecha_emision, 126) AS fecha_emision_nuevo,
-            CONVERT(VARCHAR(4000), d.subtotal) AS subtotal_anterior,
-            CONVERT(VARCHAR(4000), i.subtotal) AS subtotal_nuevo,
-            CONVERT(VARCHAR(4000), d.total_descuentos)
+            CONVERT(VARCHAR(64), i.fecha_emision, 126) AS fecha_emision_nuevo,
+            CONVERT(VARCHAR(64), d.subtotal) AS subtotal_anterior,
+            CONVERT(VARCHAR(64), i.subtotal) AS subtotal_nuevo,
+            CONVERT(VARCHAR(64), d.total_descuentos)
                 AS total_descuentos_anterior,
-            CONVERT(VARCHAR(4000), i.total_descuentos)
+            CONVERT(VARCHAR(64), i.total_descuentos)
                 AS total_descuentos_nuevo,
-            CONVERT(VARCHAR(4000), d.total_impuestos)
+            CONVERT(VARCHAR(64), d.total_impuestos)
                 AS total_impuestos_anterior,
-            CONVERT(VARCHAR(4000), i.total_impuestos) AS total_impuestos_nuevo,
-            CONVERT(VARCHAR(4000), d.monto_total) AS monto_total_anterior,
-            CONVERT(VARCHAR(4000), i.monto_total) AS monto_total_nuevo,
-            CONVERT(VARCHAR(4000), d.fecha_creacion, 126)
+            CONVERT(VARCHAR(64), i.total_impuestos) AS total_impuestos_nuevo,
+            CONVERT(VARCHAR(64), d.monto_total) AS monto_total_anterior,
+            CONVERT(VARCHAR(64), i.monto_total) AS monto_total_nuevo,
+            CONVERT(VARCHAR(64), d.fecha_creacion, 126)
                 AS fecha_creacion_anterior,
-            CONVERT(VARCHAR(4000), i.fecha_creacion, 126)
+            CONVERT(VARCHAR(64), i.fecha_creacion, 126)
                 AS fecha_creacion_nuevo,
-            CONVERT(VARCHAR(4000), d.fecha_modificacion, 126)
+            CONVERT(VARCHAR(64), d.fecha_modificacion, 126)
                 AS fecha_modificacion_anterior,
-            CONVERT(VARCHAR(4000), i.fecha_modificacion, 126)
+            CONVERT(VARCHAR(64), i.fecha_modificacion, 126)
                 AS fecha_modificacion_nuevo
         FROM inserted AS i
         FULL OUTER JOIN deleted AS d ON i.id_factura = d.id_factura
@@ -207,7 +365,7 @@ BEGIN
             @eventos TABLE
             (
                 id_evento BIGINT NOT NULL,
-                id_registro BIGINT NOT NULL
+                id_registro BIGINT NOT NULL PRIMARY KEY
             );
         INSERT INTO dbo.auditoria_evento
         (

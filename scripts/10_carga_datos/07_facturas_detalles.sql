@@ -16,7 +16,6 @@ BEGIN
         IF
             @entrada <> 0
             THROW 51000, 'Ejecute esta carga sin transaccion externa.', 1;
-        BEGIN TRANSACTION;
         IF EXISTS (SELECT 1 FROM dbo.factura)
             THROW 51001, 'La carga requiere facturas vacias.', 1;
         IF
@@ -54,6 +53,7 @@ BEGIN
         WHERE
             a.valor + 10 * b.valor + 100 * c.valor + 1000 * d.valor
             + 10000 * e.valor + 100000 * f.valor < 500000;
+        CREATE UNIQUE CLUSTERED INDEX ix_numeros ON #numeros (numero);
         SELECT
             n.numero,
             e.id_empresa
@@ -113,9 +113,13 @@ BEGIN
             THROW 51004,
             'Los maestros tienen valores invalidos para facturar.',
             1;
+        CREATE UNIQUE CLUSTERED INDEX ix_empresas ON #empresas (numero);
+        CREATE UNIQUE CLUSTERED INDEX ix_clientes ON #clientes (numero);
+        CREATE UNIQUE CLUSTERED INDEX ix_catalogo ON #catalogo (numero);
         DECLARE @desde INT = 1;
         WHILE @desde <= 500000
             BEGIN
+                BEGIN TRANSACTION;
                 SELECT
                     n.numero,
                     e.id_empresa,
@@ -154,7 +158,7 @@ BEGIN
                 INNER JOIN
                     #clientes AS c
                     ON c.numero = (n.numero - 1) % 50000 + 1
-                WHERE n.numero BETWEEN @desde AND @desde + 4999;
+                WHERE n.numero BETWEEN @desde AND @desde + 9999;
                 SELECT
                     p.numero,
                     p.id_empresa,
@@ -229,12 +233,19 @@ BEGIN
                         ) AS DECIMAL(19, 4)
                     ) AS impuesto
                 INTO #lineas FROM #descuentos AS d;
+                CREATE TABLE #facturas_lote (
+                    id_factura BIGINT NOT NULL,
+                    identificador_comprobante VARCHAR(40)
+                        COLLATE database_default NOT NULL PRIMARY KEY
+                );
                 INSERT INTO dbo.factura (
                     identificador_comprobante, id_empresa, id_cliente,
                     id_tipo_documento, id_moneda, id_estado, fecha_emision,
                     subtotal, total_descuentos, total_impuestos, monto_total,
                     fecha_creacion, fecha_modificacion
                 )
+                OUTPUT INSERTED.id_factura, INSERTED.identificador_comprobante
+                INTO #facturas_lote
                 SELECT
                     c.comprobante,
                     c.id_empresa,
@@ -283,18 +294,19 @@ BEGIN
                     l.subtotal_linea
                     - l.descuento
                     + l.impuesto AS monto_total_linea
-                FROM #cabeceras AS c INNER JOIN dbo.factura AS f
+                FROM #cabeceras AS c INNER JOIN #facturas_lote AS f
                     ON c.comprobante = f.identificador_comprobante
                 INNER JOIN #lineas AS l ON c.numero = l.numero;
+                DROP TABLE #facturas_lote;
                 DROP TABLE #lineas;
                 DROP TABLE #descuentos;
                 DROP TABLE #bases;
                 DROP TABLE #cabeceras;
                 DROP TABLE #plan;
-                SET @desde += 5000;
+                COMMIT TRANSACTION;
+                SET @desde += 10000;
             END;
 
-        COMMIT TRANSACTION;
     END TRY
     BEGIN CATCH
         SET @codigo_error = ERROR_NUMBER();

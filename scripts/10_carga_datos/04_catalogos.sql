@@ -56,28 +56,6 @@ BEGIN
         (2, N'EMITIDA', N'Comprobante emitido'),
         (3, N'PAGADA', N'Comprobante pagado'),
         (4, N'CANCELADA', N'Comprobante cancelado');
-        IF EXISTS (SELECT 1 FROM dbo.entidad_auditoria)
-            THROW 51001, 'El catalogo entidad_auditoria ya contiene datos.', 1;
-        INSERT INTO dbo.entidad_auditoria (id_entidad, nombre) VALUES
-        (1, N'FACTURA'),
-        (2, N'DETALLE_FACTURA'),
-        (3, N'CLIENTE'),
-        (4, N'PRODUCTO_SERVICIO'),
-        (5, N'PRODUCTO'),
-        (6, N'SERVICIO');
-        IF EXISTS (SELECT 1 FROM dbo.operacion_auditoria)
-            THROW 51001,
-            'El catalogo operacion_auditoria ya contiene datos.',
-            1;
-        INSERT INTO dbo.operacion_auditoria (id_operacion, nombre) VALUES
-        (1, N'INSERT'),
-        (2, N'UPDATE'),
-        (3, N'DELETE');
-        IF EXISTS (SELECT 1 FROM dbo.momento_auditoria)
-            THROW 51001, 'El catalogo momento_auditoria ya contiene datos.', 1;
-        INSERT INTO dbo.momento_auditoria (id_momento, nombre) VALUES
-        (1, N'ANTERIOR'),
-        (2, N'NUEVO');
 
         COMMIT TRANSACTION;
     END TRY

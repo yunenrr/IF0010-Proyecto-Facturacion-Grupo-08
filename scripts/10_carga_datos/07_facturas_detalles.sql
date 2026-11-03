@@ -202,7 +202,7 @@ BEGIN
                             + 1
                     WHERE l.numero_linea <= 3 + (c.numero - 1) % 3
                 ),
-                                
+
                 descuentos AS (
                     SELECT
                         b.numero,

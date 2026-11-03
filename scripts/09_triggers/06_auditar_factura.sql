@@ -108,7 +108,7 @@ BEGIN
                             'fecha_modificacion',
                             CONVERT(VARCHAR(64), i.fecha_modificacion, 126)
                         )
-                    ) AS v (campo, valor)
+                    ) AS v(campo, valor)
                 )
 
                 INSERT INTO dbo.auditoria_valor WITH (TABLOCK) (
@@ -246,7 +246,7 @@ BEGIN
                 r.fecha_modificacion_anterior,
                 r.fecha_modificacion_nuevo
             )
-        ) AS v (campo, anterior, nuevo)
+        ) AS v(campo, anterior, nuevo)
     )
 
     INSERT INTO #cambios (id_registro, id_operacion, campo, anterior, nuevo)

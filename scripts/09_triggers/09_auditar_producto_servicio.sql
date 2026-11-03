@@ -96,7 +96,7 @@ BEGIN
                 r.fecha_creacion_anterior,
                 r.fecha_creacion_nuevo
             )
-        ) AS v (campo, anterior, nuevo)
+        ) AS v(campo, anterior, nuevo)
     )
 
     INSERT INTO #cambios (id_registro, id_operacion, campo, anterior, nuevo)

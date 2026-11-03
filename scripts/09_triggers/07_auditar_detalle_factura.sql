@@ -126,7 +126,7 @@ BEGIN
                                         VARCHAR(64), i.monto_total_linea
                                     )
                                 )
-                            ) AS v (campo, valor)
+                            ) AS v(campo, valor)
                             WHERE i.numero_linea = @linea_insert
                         )
 
@@ -268,7 +268,7 @@ BEGIN
                 r.monto_total_linea_anterior,
                 r.monto_total_linea_nuevo
             )
-        ) AS v (campo, anterior, nuevo)
+        ) AS v(campo, anterior, nuevo)
     )
 
     INSERT INTO #cambios (

@@ -233,11 +233,13 @@ BEGIN
                         ) AS DECIMAL(19, 4)
                     ) AS impuesto
                 INTO #lineas FROM #descuentos AS d;
-                CREATE TABLE #facturas_lote (
-                    id_factura BIGINT NOT NULL,
-                    identificador_comprobante VARCHAR(40)
-                        COLLATE database_default NOT NULL PRIMARY KEY
-                );
+                SELECT TOP (0)
+                    CAST(id_factura AS BIGINT) AS id_factura,
+                    identificador_comprobante
+                INTO #facturas_lote
+                FROM dbo.factura;
+                CREATE UNIQUE CLUSTERED INDEX ix_facturas_lote
+                    ON #facturas_lote (identificador_comprobante);
                 INSERT INTO dbo.factura (
                     identificador_comprobante, id_empresa, id_cliente,
                     id_tipo_documento, id_moneda, id_estado, fecha_emision,

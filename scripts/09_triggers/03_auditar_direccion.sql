@@ -7,7 +7,6 @@ AFTER INSERT, UPDATE, DELETE
 AS
 BEGIN
     SET NOCOUNT ON;
-    -- Audita INSERT, UPDATE y DELETE, incluidas sentencias de varias filas.
 
     CREATE TABLE #cambios
     (
@@ -60,7 +59,7 @@ BEGIN
                 r.senas_exactas_anterior,
                 r.senas_exactas_nuevo
             )
-        ) AS v(campo, anterior, nuevo)
+        ) AS v (campo, anterior, nuevo)
     )
 
     INSERT INTO #cambios (id_registro, id_operacion, campo, anterior, nuevo)

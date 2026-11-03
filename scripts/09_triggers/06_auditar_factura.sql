@@ -7,7 +7,6 @@ AFTER INSERT, UPDATE, DELETE
 AS
 BEGIN
     SET NOCOUNT ON;
-    -- Audita INSERT, UPDATE y DELETE, incluidas sentencias de varias filas.
 
     IF NOT EXISTS (SELECT 1 FROM deleted)
         BEGIN
@@ -30,7 +29,6 @@ BEGIN
                     id_evento BIGINT NOT NULL PRIMARY KEY,
                     id_registro BIGINT NOT NULL
                 );
-                -- Resolver el catalogo una vez por sentencia.
                 SELECT
                     a.id_campo,
                     c.posicion
@@ -86,7 +84,6 @@ BEGIN
                     @usuario_insert AS id_usuario,
                     @fecha_insert AS fecha_hora_cambio
                 FROM #facturas_insertadas AS i;
-                -- Eventos y campos en orden de clave agrupada.
                 INSERT INTO dbo.auditoria_valor WITH (TABLOCK) (
                     id_evento, id_campo, id_momento, valor
                 )
@@ -120,8 +117,7 @@ BEGIN
                 INNER JOIN #facturas_insertadas AS i
                     ON e.id_registro = i.id_factura
                 CROSS JOIN #campos_insert AS c
-                ORDER BY e.id_evento, c.id_campo
-                OPTION (FORCE ORDER, LOOP JOIN, MAXDOP 1);
+                ORDER BY e.id_evento, c.id_campo;
                 COMMIT TRANSACTION;
             END TRY
             BEGIN CATCH

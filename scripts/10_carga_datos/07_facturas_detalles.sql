@@ -116,8 +116,6 @@ BEGIN
         CREATE UNIQUE CLUSTERED INDEX ix_empresas ON #empresas (numero);
         CREATE UNIQUE CLUSTERED INDEX ix_clientes ON #clientes (numero);
         CREATE UNIQUE CLUSTERED INDEX ix_catalogo ON #catalogo (numero);
-        -- Lotes moderados limitan memoria, ordenamientos y log por transaccion.
-        -- Cada lote confirma sus facturas, detalles y auditoria juntos.
         DECLARE @tamano_lote INT = 20000;
         DECLARE @desde INT = 1;
         DECLARE @cargadas INT;

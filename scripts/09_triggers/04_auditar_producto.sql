@@ -7,15 +7,16 @@ AFTER INSERT, UPDATE, DELETE
 AS
 BEGIN
     SET NOCOUNT ON;
+    -- Audita INSERT, UPDATE y DELETE, incluidas sentencias de varias filas.
 
-    DECLARE
-        @cambios TABLE
+    CREATE TABLE #cambios
         (
             id_registro BIGINT NOT NULL,
             id_operacion INT NOT NULL,
-            campo VARCHAR(128) NOT NULL,
-            anterior VARCHAR(4000) NULL,
-            nuevo VARCHAR(4000) NULL
+            campo VARCHAR(128) COLLATE DATABASE_DEFAULT NOT NULL,
+            anterior VARCHAR(64) COLLATE DATABASE_DEFAULT NULL,
+            nuevo VARCHAR(64) COLLATE DATABASE_DEFAULT NULL,
+            PRIMARY KEY (id_registro, campo)
         );
 
     WITH registros AS (
@@ -26,8 +27,8 @@ BEGIN
                 WHEN d.id_producto_servicio IS NULL THEN 1
                 WHEN i.id_producto_servicio IS NULL THEN 3 ELSE 2
             END AS id_operacion,
-            CONVERT(VARCHAR(4000), d.existencias) AS existencias_anterior,
-            CONVERT(VARCHAR(4000), i.existencias) AS existencias_nuevo
+            CONVERT(VARCHAR(64), d.existencias) AS existencias_anterior,
+            CONVERT(VARCHAR(64), i.existencias) AS existencias_nuevo
         FROM inserted AS i
         FULL OUTER JOIN
             deleted AS d
@@ -36,15 +37,19 @@ BEGIN
 
     valores AS (
         SELECT
-            id_registro,
-            id_operacion,
-            'existencias' AS campo,
-            existencias_anterior AS anterior,
-            existencias_nuevo AS nuevo
-        FROM registros
+            r.id_registro,
+            r.id_operacion,
+            v.campo,
+            v.anterior,
+            v.nuevo
+        FROM registros AS r
+        CROSS APPLY (
+            VALUES
+                ('existencias', r.existencias_anterior, r.existencias_nuevo)
+        ) AS v(campo, anterior, nuevo)
     )
 
-    INSERT INTO @cambios (id_registro, id_operacion, campo, anterior, nuevo)
+    INSERT INTO #cambios (id_registro, id_operacion, campo, anterior, nuevo)
     SELECT
         v.id_registro,
         v.id_operacion,
@@ -53,11 +58,12 @@ BEGIN
         v.nuevo
     FROM valores AS v
     WHERE
-        v.anterior <> v.nuevo
+        CONVERT(VARBINARY(4000), v.anterior)
+        <> CONVERT(VARBINARY(4000), v.nuevo)
         OR (v.anterior IS NULL AND v.nuevo IS NOT NULL)
         OR (v.anterior IS NOT NULL AND v.nuevo IS NULL);
 
-    IF NOT EXISTS (SELECT 1 FROM @cambios) RETURN;
+    IF NOT EXISTS (SELECT 1 FROM #cambios) RETURN;
 
     BEGIN TRY
         BEGIN TRANSACTION;
@@ -74,11 +80,10 @@ BEGIN
                 SET @id_usuario = SCOPE_IDENTITY();
             END;
 
-        DECLARE
-            @eventos TABLE
+        CREATE TABLE #eventos
             (
                 id_evento BIGINT NOT NULL,
-                id_registro BIGINT NOT NULL
+                id_registro BIGINT NOT NULL PRIMARY KEY
             );
         INSERT INTO dbo.auditoria_evento
         (
@@ -86,14 +91,14 @@ BEGIN
             id_usuario, fecha_hora_cambio
         )
         OUTPUT INSERTED.id_evento, INSERTED.id_registro_principal
-        INTO @eventos
+        INTO #eventos
         SELECT DISTINCT
             5 AS id_entidad,
             c.id_registro,
             c.id_operacion,
             @id_usuario AS id_usuario,
             @fecha AS fecha_hora_cambio
-        FROM @cambios AS c;
+        FROM #cambios AS c;
 
         INSERT INTO dbo.auditoria_valor
         (id_evento, id_campo, id_momento, valor)
@@ -102,8 +107,8 @@ BEGIN
             a.id_campo,
             1 AS id_momento,
             c.anterior
-        FROM @cambios AS c
-        INNER JOIN @eventos AS e ON c.id_registro = e.id_registro
+        FROM #cambios AS c
+        INNER JOIN #eventos AS e ON c.id_registro = e.id_registro
         INNER JOIN dbo.campo_auditoria AS a
             ON a.id_entidad = 5 AND c.campo = a.nombre
         WHERE c.anterior IS NOT NULL
@@ -113,8 +118,8 @@ BEGIN
             a.id_campo,
             2 AS id_momento,
             c.nuevo
-        FROM @cambios AS c
-        INNER JOIN @eventos AS e ON c.id_registro = e.id_registro
+        FROM #cambios AS c
+        INNER JOIN #eventos AS e ON c.id_registro = e.id_registro
         INNER JOIN dbo.campo_auditoria AS a
             ON a.id_entidad = 5 AND c.campo = a.nombre
         WHERE c.nuevo IS NOT NULL;

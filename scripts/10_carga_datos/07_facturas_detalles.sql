@@ -116,6 +116,9 @@ BEGIN
         CREATE UNIQUE CLUSTERED INDEX ix_empresas ON #empresas (numero);
         CREATE UNIQUE CLUSTERED INDEX ix_clientes ON #clientes (numero);
         CREATE UNIQUE CLUSTERED INDEX ix_catalogo ON #catalogo (numero);
+        -- Lotes moderados limitan memoria, ordenamientos y log por transaccion.
+        -- Cada lote confirma sus facturas, detalles y auditoria juntos.
+        DECLARE @tamano_lote INT = 5000;
         DECLARE @desde INT = 1;
         DECLARE @cargadas INT;
         WHILE @desde <= 500000
@@ -159,7 +162,7 @@ BEGIN
                 INNER JOIN
                     #clientes AS c
                     ON c.numero = (n.numero - 1) % 50000 + 1
-                WHERE n.numero BETWEEN @desde AND @desde + 19999;
+                WHERE n.numero BETWEEN @desde AND @desde + @tamano_lote - 1;
                 SELECT
                     p.numero,
                     p.id_empresa,
@@ -315,9 +318,9 @@ BEGIN
                 DROP TABLE #cabeceras;
                 DROP TABLE #plan;
                 COMMIT TRANSACTION;
-                SET @desde += 20000;
+                SET @desde += @tamano_lote;
                 SET @cargadas = @desde - 1;
-                IF @cargadas % 100000 = 0
+                IF @cargadas % 25000 = 0
                     RAISERROR (
                         'Facturas cargadas y auditadas: %d de 500000.',
                         10, 1, @cargadas

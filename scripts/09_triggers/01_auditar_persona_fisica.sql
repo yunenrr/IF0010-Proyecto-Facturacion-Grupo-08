@@ -7,15 +7,16 @@ AFTER INSERT, UPDATE, DELETE
 AS
 BEGIN
     SET NOCOUNT ON;
+    -- Audita INSERT, UPDATE y DELETE, incluidas sentencias de varias filas.
 
-    DECLARE
-        @cambios TABLE
+    CREATE TABLE #cambios
         (
             id_registro BIGINT NOT NULL,
             id_operacion INT NOT NULL,
-            campo VARCHAR(128) NOT NULL,
-            anterior VARCHAR(4000) NULL,
-            nuevo VARCHAR(4000) NULL
+            campo VARCHAR(128) COLLATE DATABASE_DEFAULT NOT NULL,
+            anterior VARCHAR(250) COLLATE DATABASE_DEFAULT NULL,
+            nuevo VARCHAR(250) COLLATE DATABASE_DEFAULT NULL,
+            PRIMARY KEY (id_registro, campo)
         );
 
     WITH registros AS (
@@ -25,45 +26,47 @@ BEGIN
                 WHEN d.id_cliente IS NULL THEN 1
                 WHEN i.id_cliente IS NULL THEN 3 ELSE 2
             END AS id_operacion,
-            CONVERT(VARCHAR(4000), d.nombre_persona) AS nombre_persona_anterior,
-            CONVERT(VARCHAR(4000), i.nombre_persona) AS nombre_persona_nuevo,
-            CONVERT(VARCHAR(4000), d.primer_apellido)
+            CONVERT(VARCHAR(250), d.nombre_persona) AS nombre_persona_anterior,
+            CONVERT(VARCHAR(250), i.nombre_persona) AS nombre_persona_nuevo,
+            CONVERT(VARCHAR(250), d.primer_apellido)
                 AS primer_apellido_anterior,
-            CONVERT(VARCHAR(4000), i.primer_apellido) AS primer_apellido_nuevo,
-            CONVERT(VARCHAR(4000), d.segundo_apellido)
+            CONVERT(VARCHAR(250), i.primer_apellido) AS primer_apellido_nuevo,
+            CONVERT(VARCHAR(250), d.segundo_apellido)
                 AS segundo_apellido_anterior,
-            CONVERT(VARCHAR(4000), i.segundo_apellido) AS segundo_apellido_nuevo
+            CONVERT(VARCHAR(250), i.segundo_apellido) AS segundo_apellido_nuevo
         FROM inserted AS i
         FULL OUTER JOIN deleted AS d ON i.id_cliente = d.id_cliente
     ),
 
     valores AS (
         SELECT
-            id_registro,
-            id_operacion,
-            'nombre_persona' AS campo,
-            nombre_persona_anterior AS anterior,
-            nombre_persona_nuevo AS nuevo
-        FROM registros
-        UNION ALL
-        SELECT
-            id_registro,
-            id_operacion,
-            'primer_apellido' AS campo,
-            primer_apellido_anterior AS anterior,
-            primer_apellido_nuevo AS nuevo
-        FROM registros
-        UNION ALL
-        SELECT
-            id_registro,
-            id_operacion,
-            'segundo_apellido' AS campo,
-            segundo_apellido_anterior AS anterior,
-            segundo_apellido_nuevo AS nuevo
-        FROM registros
+            r.id_registro,
+            r.id_operacion,
+            v.campo,
+            v.anterior,
+            v.nuevo
+        FROM registros AS r
+        CROSS APPLY (
+            VALUES
+                (
+                    'nombre_persona',
+                    r.nombre_persona_anterior,
+                    r.nombre_persona_nuevo
+                ),
+                (
+                    'primer_apellido',
+                    r.primer_apellido_anterior,
+                    r.primer_apellido_nuevo
+                ),
+                (
+                    'segundo_apellido',
+                    r.segundo_apellido_anterior,
+                    r.segundo_apellido_nuevo
+                )
+        ) AS v(campo, anterior, nuevo)
     )
 
-    INSERT INTO @cambios (id_registro, id_operacion, campo, anterior, nuevo)
+    INSERT INTO #cambios (id_registro, id_operacion, campo, anterior, nuevo)
     SELECT
         v.id_registro,
         v.id_operacion,
@@ -72,11 +75,12 @@ BEGIN
         v.nuevo
     FROM valores AS v
     WHERE
-        v.anterior <> v.nuevo
+        CONVERT(VARBINARY(4000), v.anterior)
+        <> CONVERT(VARBINARY(4000), v.nuevo)
         OR (v.anterior IS NULL AND v.nuevo IS NOT NULL)
         OR (v.anterior IS NOT NULL AND v.nuevo IS NULL);
 
-    IF NOT EXISTS (SELECT 1 FROM @cambios) RETURN;
+    IF NOT EXISTS (SELECT 1 FROM #cambios) RETURN;
 
     BEGIN TRY
         BEGIN TRANSACTION;
@@ -93,11 +97,10 @@ BEGIN
                 SET @id_usuario = SCOPE_IDENTITY();
             END;
 
-        DECLARE
-            @eventos TABLE
+        CREATE TABLE #eventos
             (
                 id_evento BIGINT NOT NULL,
-                id_registro BIGINT NOT NULL
+                id_registro BIGINT NOT NULL PRIMARY KEY
             );
         INSERT INTO dbo.auditoria_evento
         (
@@ -105,14 +108,14 @@ BEGIN
             id_usuario, fecha_hora_cambio
         )
         OUTPUT INSERTED.id_evento, INSERTED.id_registro_principal
-        INTO @eventos
+        INTO #eventos
         SELECT DISTINCT
             8 AS id_entidad,
             c.id_registro,
             c.id_operacion,
             @id_usuario AS id_usuario,
             @fecha AS fecha_hora_cambio
-        FROM @cambios AS c;
+        FROM #cambios AS c;
 
         INSERT INTO dbo.auditoria_valor
         (id_evento, id_campo, id_momento, valor)
@@ -121,8 +124,8 @@ BEGIN
             a.id_campo,
             1 AS id_momento,
             c.anterior
-        FROM @cambios AS c
-        INNER JOIN @eventos AS e ON c.id_registro = e.id_registro
+        FROM #cambios AS c
+        INNER JOIN #eventos AS e ON c.id_registro = e.id_registro
         INNER JOIN dbo.campo_auditoria AS a
             ON a.id_entidad = 8 AND c.campo = a.nombre
         WHERE c.anterior IS NOT NULL
@@ -132,8 +135,8 @@ BEGIN
             a.id_campo,
             2 AS id_momento,
             c.nuevo
-        FROM @cambios AS c
-        INNER JOIN @eventos AS e ON c.id_registro = e.id_registro
+        FROM #cambios AS c
+        INNER JOIN #eventos AS e ON c.id_registro = e.id_registro
         INNER JOIN dbo.campo_auditoria AS a
             ON a.id_entidad = 8 AND c.campo = a.nombre
         WHERE c.nuevo IS NOT NULL;

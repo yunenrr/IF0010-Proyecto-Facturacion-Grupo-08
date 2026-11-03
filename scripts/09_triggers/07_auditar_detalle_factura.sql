@@ -7,6 +7,7 @@ AFTER INSERT, UPDATE, DELETE
 AS
 BEGIN
     SET NOCOUNT ON;
+    -- Audita INSERT, UPDATE y DELETE, incluidas sentencias de varias filas.
 
     IF NOT EXISTS (SELECT 1 FROM deleted)
         BEGIN
@@ -76,70 +77,53 @@ BEGIN
                         FROM #eventos_insert
                         ;
                         WITH valores_insert AS (
-                            SELECT
-                                i.id_factura,
-                                'id_producto_servicio' AS campo,
-                                CONVERT(VARCHAR(64), i.id_producto_servicio)
-                                    AS valor
+                            SELECT i.id_factura, v.campo, v.valor
                             FROM #insertados AS i
-                            WHERE i.numero_linea = @linea_insert
-                            UNION ALL
-                            SELECT
-                                i.id_factura,
-                                'id_descripcion' AS campo,
-                                CONVERT(VARCHAR(64), i.id_descripcion) AS valor
-                            FROM #insertados AS i
-                            WHERE i.numero_linea = @linea_insert
-                            UNION ALL
-                            SELECT
-                                i.id_factura,
-                                'cantidad' AS campo,
-                                CONVERT(VARCHAR(64), i.cantidad) AS valor
-                            FROM #insertados AS i
-                            WHERE i.numero_linea = @linea_insert
-                            UNION ALL
-                            SELECT
-                                i.id_factura,
-                                'precio_unitario' AS campo,
-                                CONVERT(VARCHAR(64), i.precio_unitario) AS valor
-                            FROM #insertados AS i
-                            WHERE i.numero_linea = @linea_insert
-                            UNION ALL
-                            SELECT
-                                i.id_factura,
-                                'porcentaje_impuesto' AS campo,
-                                CONVERT(VARCHAR(64), i.porcentaje_impuesto)
-                                    AS valor
-                            FROM #insertados AS i
-                            WHERE i.numero_linea = @linea_insert
-                            UNION ALL
-                            SELECT
-                                i.id_factura,
-                                'monto_descuento' AS campo,
-                                CONVERT(VARCHAR(64), i.monto_descuento) AS valor
-                            FROM #insertados AS i
-                            WHERE i.numero_linea = @linea_insert
-                            UNION ALL
-                            SELECT
-                                i.id_factura,
-                                'subtotal_linea' AS campo,
-                                CONVERT(VARCHAR(64), i.subtotal_linea) AS valor
-                            FROM #insertados AS i
-                            WHERE i.numero_linea = @linea_insert
-                            UNION ALL
-                            SELECT
-                                i.id_factura,
-                                'monto_impuesto' AS campo,
-                                CONVERT(VARCHAR(64), i.monto_impuesto) AS valor
-                            FROM #insertados AS i
-                            WHERE i.numero_linea = @linea_insert
-                            UNION ALL
-                            SELECT
-                                i.id_factura,
-                                'monto_total_linea' AS campo,
-                                CONVERT(VARCHAR(64), i.monto_total_linea)
-                                    AS valor
-                            FROM #insertados AS i
+                            CROSS APPLY (
+                                VALUES
+                                    (
+                                        'id_producto_servicio',
+                                        CONVERT(
+                                            VARCHAR(64), i.id_producto_servicio
+                                        )
+                                    ),
+                                    (
+                                        'id_descripcion',
+                                        CONVERT(VARCHAR(64), i.id_descripcion)
+                                    ),
+                                    (
+                                        'cantidad',
+                                        CONVERT(VARCHAR(64), i.cantidad)
+                                    ),
+                                    (
+                                        'precio_unitario',
+                                        CONVERT(VARCHAR(64), i.precio_unitario)
+                                    ),
+                                    (
+                                        'porcentaje_impuesto',
+                                        CONVERT(
+                                            VARCHAR(64), i.porcentaje_impuesto
+                                        )
+                                    ),
+                                    (
+                                        'monto_descuento',
+                                        CONVERT(VARCHAR(64), i.monto_descuento)
+                                    ),
+                                    (
+                                        'subtotal_linea',
+                                        CONVERT(VARCHAR(64), i.subtotal_linea)
+                                    ),
+                                    (
+                                        'monto_impuesto',
+                                        CONVERT(VARCHAR(64), i.monto_impuesto)
+                                    ),
+                                    (
+                                        'monto_total_linea',
+                                        CONVERT(
+                                            VARCHAR(64), i.monto_total_linea
+                                        )
+                                    )
+                            ) AS v(campo, valor)
                             WHERE i.numero_linea = @linea_insert
                         )
 
@@ -178,15 +162,14 @@ BEGIN
             RETURN;
         END;
 
-    DECLARE
-        @cambios TABLE
+    CREATE TABLE #cambios
         (
             id_registro BIGINT NOT NULL,
             numero_linea SMALLINT NOT NULL,
             id_operacion INT NOT NULL,
-            campo VARCHAR(64) NOT NULL,
-            anterior VARCHAR(64) NULL,
-            nuevo VARCHAR(64) NULL,
+            campo VARCHAR(64) COLLATE DATABASE_DEFAULT NOT NULL,
+            anterior VARCHAR(64) COLLATE DATABASE_DEFAULT NULL,
+            nuevo VARCHAR(64) COLLATE DATABASE_DEFAULT NULL,
             PRIMARY KEY (numero_linea, id_registro, campo)
         );
 
@@ -232,88 +215,60 @@ BEGIN
 
     valores AS (
         SELECT
-            id_registro,
-            numero_linea,
-            id_operacion,
-            'id_producto_servicio' AS campo,
-            id_producto_servicio_anterior AS anterior,
-            id_producto_servicio_nuevo AS nuevo
-        FROM registros
-        UNION ALL
-        SELECT
-            id_registro,
-            numero_linea,
-            id_operacion,
-            'id_descripcion' AS campo,
-            id_descripcion_anterior AS anterior,
-            id_descripcion_nuevo AS nuevo
-        FROM registros
-        UNION ALL
-        SELECT
-            id_registro,
-            numero_linea,
-            id_operacion,
-            'cantidad' AS campo,
-            cantidad_anterior AS anterior,
-            cantidad_nuevo AS nuevo
-        FROM registros
-        UNION ALL
-        SELECT
-            id_registro,
-            numero_linea,
-            id_operacion,
-            'precio_unitario' AS campo,
-            precio_unitario_anterior AS anterior,
-            precio_unitario_nuevo AS nuevo
-        FROM registros
-        UNION ALL
-        SELECT
-            id_registro,
-            numero_linea,
-            id_operacion,
-            'porcentaje_impuesto' AS campo,
-            porcentaje_impuesto_anterior AS anterior,
-            porcentaje_impuesto_nuevo AS nuevo
-        FROM registros
-        UNION ALL
-        SELECT
-            id_registro,
-            numero_linea,
-            id_operacion,
-            'monto_descuento' AS campo,
-            monto_descuento_anterior AS anterior,
-            monto_descuento_nuevo AS nuevo
-        FROM registros
-        UNION ALL
-        SELECT
-            id_registro,
-            numero_linea,
-            id_operacion,
-            'subtotal_linea' AS campo,
-            subtotal_linea_anterior AS anterior,
-            subtotal_linea_nuevo AS nuevo
-        FROM registros
-        UNION ALL
-        SELECT
-            id_registro,
-            numero_linea,
-            id_operacion,
-            'monto_impuesto' AS campo,
-            monto_impuesto_anterior AS anterior,
-            monto_impuesto_nuevo AS nuevo
-        FROM registros
-        UNION ALL
-        SELECT
-            id_registro,
-            numero_linea,
-            id_operacion,
-            'monto_total_linea' AS campo,
-            monto_total_linea_anterior AS anterior,
-            monto_total_linea_nuevo AS nuevo
-        FROM registros
+            r.id_registro,
+            r.numero_linea,
+            r.id_operacion,
+            v.campo,
+            v.anterior,
+            v.nuevo
+        FROM registros AS r
+        CROSS APPLY (
+            VALUES
+                (
+                    'id_producto_servicio',
+                    r.id_producto_servicio_anterior,
+                    r.id_producto_servicio_nuevo
+                ),
+                (
+                    'id_descripcion',
+                    r.id_descripcion_anterior,
+                    r.id_descripcion_nuevo
+                ),
+                ('cantidad', r.cantidad_anterior, r.cantidad_nuevo),
+                (
+                    'precio_unitario',
+                    r.precio_unitario_anterior,
+                    r.precio_unitario_nuevo
+                ),
+                (
+                    'porcentaje_impuesto',
+                    r.porcentaje_impuesto_anterior,
+                    r.porcentaje_impuesto_nuevo
+                ),
+                (
+                    'monto_descuento',
+                    r.monto_descuento_anterior,
+                    r.monto_descuento_nuevo
+                ),
+                (
+                    'subtotal_linea',
+                    r.subtotal_linea_anterior,
+                    r.subtotal_linea_nuevo
+                ),
+                (
+                    'monto_impuesto',
+                    r.monto_impuesto_anterior,
+                    r.monto_impuesto_nuevo
+                ),
+                (
+                    'monto_total_linea',
+                    r.monto_total_linea_anterior,
+                    r.monto_total_linea_nuevo
+                )
+        ) AS v(campo, anterior, nuevo)
     )
 
-    INSERT INTO @cambios (
+    INSERT INTO #cambios (
         id_registro, numero_linea, id_operacion, campo, anterior, nuevo
     )
     SELECT
@@ -325,11 +280,12 @@ BEGIN
         v.nuevo
     FROM valores AS v
     WHERE
-        v.anterior <> v.nuevo
+        CONVERT(VARBINARY(4000), v.anterior)
+        <> CONVERT(VARBINARY(4000), v.nuevo)
         OR (v.anterior IS NULL AND v.nuevo IS NOT NULL)
         OR (v.anterior IS NOT NULL AND v.nuevo IS NULL);
 
-    IF NOT EXISTS (SELECT 1 FROM @cambios) RETURN;
+    IF NOT EXISTS (SELECT 1 FROM #cambios) RETURN;
 
     BEGIN TRY
         BEGIN TRANSACTION;
@@ -347,30 +303,30 @@ BEGIN
             END;
 
         DECLARE @linea SMALLINT;
-        DECLARE @eventos TABLE (
+        CREATE TABLE #eventos (
             id_evento BIGINT NOT NULL,
             id_factura BIGINT NOT NULL PRIMARY KEY
         );
         DECLARE detalle_cursor CURSOR LOCAL FAST_FORWARD FOR
-        SELECT DISTINCT numero_linea FROM @cambios;
+        SELECT DISTINCT numero_linea FROM #cambios;
         OPEN detalle_cursor;
         FETCH NEXT FROM detalle_cursor INTO @linea;
         WHILE @@FETCH_STATUS = 0
             BEGIN
-                DELETE FROM @eventos;
+                DELETE FROM #eventos;
                 INSERT INTO dbo.auditoria_evento (
                     id_entidad, id_registro_principal, id_operacion,
                     id_usuario, fecha_hora_cambio
                 )
                 OUTPUT INSERTED.id_evento, INSERTED.id_registro_principal
-                INTO @eventos
+                INTO #eventos
                 SELECT DISTINCT
                     2 AS id_entidad,
                     c.id_registro,
                     c.id_operacion,
                     @id_usuario AS id_usuario,
                     @fecha AS fecha_hora_cambio
-                FROM @cambios AS c
+                FROM #cambios AS c
                 WHERE c.numero_linea = @linea;
 
                 INSERT INTO dbo.auditoria_evento_detalle (
@@ -379,7 +335,7 @@ BEGIN
                 SELECT
                     id_evento,
                     @linea AS numero_linea
-                FROM @eventos;
+                FROM #eventos;
 
                 INSERT INTO dbo.auditoria_valor
                 (id_evento, id_campo, id_momento, valor)
@@ -388,8 +344,8 @@ BEGIN
                     a.id_campo,
                     1 AS id_momento,
                     c.anterior
-                FROM @cambios AS c
-                INNER JOIN @eventos AS e ON c.id_registro = e.id_factura
+                FROM #cambios AS c
+                INNER JOIN #eventos AS e ON c.id_registro = e.id_factura
                 INNER JOIN dbo.campo_auditoria AS a
                     ON a.id_entidad = 2 AND c.campo = a.nombre
                 WHERE c.numero_linea = @linea AND c.anterior IS NOT NULL
@@ -399,8 +355,8 @@ BEGIN
                     a.id_campo,
                     2 AS id_momento,
                     c.nuevo
-                FROM @cambios AS c
-                INNER JOIN @eventos AS e ON c.id_registro = e.id_factura
+                FROM #cambios AS c
+                INNER JOIN #eventos AS e ON c.id_registro = e.id_factura
                 INNER JOIN dbo.campo_auditoria AS a
                     ON a.id_entidad = 2 AND c.campo = a.nombre
                 WHERE c.numero_linea = @linea AND c.nuevo IS NOT NULL;

@@ -144,7 +144,8 @@ BEGIN
                                 e.id_registro = i.id_factura
                                 AND i.numero_linea = @linea_insert
                         CROSS JOIN #campos_insert AS c
-                        ORDER BY e.id_evento, c.id_campo;
+                        ORDER BY e.id_evento, c.id_campo
+                        OPTION (FORCE ORDER, LOOP JOIN, MAXDOP 1);
                         FETCH NEXT FROM insercion_cursor INTO @linea_insert;
                     END;
                 CLOSE insercion_cursor;

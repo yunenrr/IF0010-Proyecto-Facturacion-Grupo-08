@@ -117,7 +117,8 @@ BEGIN
                 INNER JOIN #facturas_insertadas AS i
                     ON e.id_registro = i.id_factura
                 CROSS JOIN #campos_insert AS c
-                ORDER BY e.id_evento, c.id_campo;
+                ORDER BY e.id_evento, c.id_campo
+                OPTION (FORCE ORDER, LOOP JOIN, MAXDOP 1);
                 COMMIT TRANSACTION;
             END TRY
             BEGIN CATCH

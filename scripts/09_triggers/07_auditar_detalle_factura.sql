@@ -47,7 +47,7 @@ BEGIN
                     (7, 'subtotal_linea'),
                     (8, 'monto_impuesto'),
                     (9, 'monto_total_linea')
-                ) AS c (posicion, nombre) ON a.nombre = c.nombre
+                ) AS c(posicion, nombre) ON a.nombre = c.nombre
                 WHERE a.id_entidad = 2;
                 CREATE UNIQUE CLUSTERED INDEX ix_campos_insert
                     ON #campos_insert (id_campo);
@@ -272,7 +272,7 @@ BEGIN
                 r.monto_total_linea_anterior,
                 r.monto_total_linea_nuevo
             )
-        ) AS v (campo, anterior, nuevo)
+        ) AS v(campo, anterior, nuevo)
     )
 
     INSERT INTO #cambios (

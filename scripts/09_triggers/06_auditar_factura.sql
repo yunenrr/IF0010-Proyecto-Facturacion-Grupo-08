@@ -51,7 +51,7 @@ BEGIN
                     (11, 'monto_total'),
                     (12, 'fecha_creacion'),
                     (13, 'fecha_modificacion')
-                ) AS c (posicion, nombre) ON a.nombre = c.nombre
+                ) AS c(posicion, nombre) ON a.nombre = c.nombre
                 WHERE a.id_entidad = 1;
                 CREATE UNIQUE CLUSTERED INDEX ix_campos_insert
                     ON #campos_insert (id_campo);
@@ -244,7 +244,7 @@ BEGIN
                 r.fecha_modificacion_anterior,
                 r.fecha_modificacion_nuevo
             )
-        ) AS v (campo, anterior, nuevo)
+        ) AS v(campo, anterior, nuevo)
     )
 
     INSERT INTO #cambios (id_registro, id_operacion, campo, anterior, nuevo)

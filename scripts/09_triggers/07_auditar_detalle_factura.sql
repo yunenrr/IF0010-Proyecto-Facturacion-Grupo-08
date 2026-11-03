@@ -27,9 +27,30 @@ BEGIN
                         SET @usuario_insert = SCOPE_IDENTITY();
                     END;
                 CREATE TABLE #eventos_insert (
-                    id_evento BIGINT NOT NULL,
-                    id_registro BIGINT NOT NULL PRIMARY KEY
+                    id_evento BIGINT NOT NULL PRIMARY KEY,
+                    id_registro BIGINT NOT NULL
                 );
+                -- Resolver el catalogo una vez por sentencia.
+                SELECT
+                    a.id_campo,
+                    c.posicion
+                INTO #campos_insert
+                FROM dbo.campo_auditoria AS a
+                INNER JOIN (
+                    VALUES
+                    (1, 'id_producto_servicio'),
+                    (2, 'id_descripcion'),
+                    (3, 'cantidad'),
+                    (4, 'precio_unitario'),
+                    (5, 'porcentaje_impuesto'),
+                    (6, 'monto_descuento'),
+                    (7, 'subtotal_linea'),
+                    (8, 'monto_impuesto'),
+                    (9, 'monto_total_linea')
+                ) AS c (posicion, nombre) ON a.nombre = c.nombre
+                WHERE a.id_entidad = 2;
+                CREATE UNIQUE CLUSTERED INDEX ix_campos_insert
+                    ON #campos_insert (id_campo);
                 SELECT
                     id_factura,
                     numero_linea,
@@ -76,75 +97,58 @@ BEGIN
                             @linea_insert AS numero_linea
                         FROM #eventos_insert
                         ;
-                        WITH valores_insert AS (
-                            SELECT
-                                i.id_factura,
-                                v.campo,
-                                v.valor
-                            FROM #insertados AS i
-                            CROSS APPLY (
-                                VALUES
-                                (
-                                    'id_producto_servicio',
-                                    CONVERT(
-                                        VARCHAR(64), i.id_producto_servicio
-                                    )
-                                ),
-                                (
-                                    'id_descripcion',
-                                    CONVERT(VARCHAR(64), i.id_descripcion)
-                                ),
-                                (
-                                    'cantidad',
-                                    CONVERT(VARCHAR(64), i.cantidad)
-                                ),
-                                (
-                                    'precio_unitario',
-                                    CONVERT(VARCHAR(64), i.precio_unitario)
-                                ),
-                                (
-                                    'porcentaje_impuesto',
-                                    CONVERT(
-                                        VARCHAR(64), i.porcentaje_impuesto
-                                    )
-                                ),
-                                (
-                                    'monto_descuento',
-                                    CONVERT(VARCHAR(64), i.monto_descuento)
-                                ),
-                                (
-                                    'subtotal_linea',
-                                    CONVERT(VARCHAR(64), i.subtotal_linea)
-                                ),
-                                (
-                                    'monto_impuesto',
-                                    CONVERT(VARCHAR(64), i.monto_impuesto)
-                                ),
-                                (
-                                    'monto_total_linea',
-                                    CONVERT(
-                                        VARCHAR(64), i.monto_total_linea
-                                    )
-                                )
-                            ) AS v(campo, valor)
-                            WHERE i.numero_linea = @linea_insert
-                        )
-
+                        -- Eventos y campos en orden de clave agrupada.
                         INSERT INTO dbo.auditoria_valor WITH (TABLOCK) (
                             id_evento, id_campo, id_momento, valor
                         )
                         SELECT
                             e.id_evento,
-                            a.id_campo,
+                            c.id_campo,
                             2 AS id_momento,
-                            v.valor
-                        FROM valores_insert AS v
-                        INNER JOIN
-                            #eventos_insert AS e
-                            ON v.id_factura = e.id_registro
-                        INNER JOIN dbo.campo_auditoria AS a
-                            ON a.id_entidad = 2 AND v.campo = a.nombre
-                        ORDER BY e.id_evento, a.id_campo;
+                            CASE c.posicion
+                                WHEN
+                                    1
+                                    THEN
+                                        CONVERT(
+                                            VARCHAR(64), i.id_producto_servicio
+                                        )
+                                WHEN
+                                    2
+                                    THEN CONVERT(VARCHAR(64), i.id_descripcion)
+                                WHEN 3 THEN CONVERT(VARCHAR(64), i.cantidad)
+                                WHEN
+                                    4
+                                    THEN CONVERT(VARCHAR(64), i.precio_unitario)
+                                WHEN
+                                    5
+                                    THEN
+                                        CONVERT(
+                                            VARCHAR(64), i.porcentaje_impuesto
+                                        )
+                                WHEN
+                                    6
+                                    THEN CONVERT(VARCHAR(64), i.monto_descuento)
+                                WHEN
+                                    7
+                                    THEN CONVERT(VARCHAR(64), i.subtotal_linea)
+                                WHEN
+                                    8
+                                    THEN CONVERT(VARCHAR(64), i.monto_impuesto)
+                                WHEN
+                                    9
+                                    THEN
+                                        CONVERT(
+                                            VARCHAR(64), i.monto_total_linea
+                                        )
+                            END AS valor
+                        FROM #eventos_insert AS e
+                        INNER JOIN #insertados AS i
+                            ON
+                                e.id_registro = i.id_factura
+                                AND i.numero_linea = @linea_insert
+                        CROSS JOIN #campos_insert AS c
+                        ORDER BY e.id_evento, c.id_campo
+                        OPTION (FORCE ORDER, LOOP JOIN, MAXDOP 1);
                         FETCH NEXT FROM insercion_cursor INTO @linea_insert;
                     END;
                 CLOSE insercion_cursor;
@@ -268,7 +272,7 @@ BEGIN
                 r.monto_total_linea_anterior,
                 r.monto_total_linea_nuevo
             )
-        ) AS v(campo, anterior, nuevo)
+        ) AS v (campo, anterior, nuevo)
     )
 
     INSERT INTO #cambios (

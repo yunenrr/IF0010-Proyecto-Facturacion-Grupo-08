@@ -10,14 +10,14 @@ BEGIN
     -- Audita INSERT, UPDATE y DELETE, incluidas sentencias de varias filas.
 
     CREATE TABLE #cambios
-        (
-            id_registro BIGINT NOT NULL,
-            id_operacion INT NOT NULL,
-            campo VARCHAR(128) COLLATE DATABASE_DEFAULT NOT NULL,
-            anterior VARCHAR(500) COLLATE DATABASE_DEFAULT NULL,
-            nuevo VARCHAR(500) COLLATE DATABASE_DEFAULT NULL,
-            PRIMARY KEY (id_registro, campo)
-        );
+    (
+        id_registro BIGINT NOT NULL,
+        id_operacion INT NOT NULL,
+        campo VARCHAR(128) COLLATE database_default NOT NULL,
+        anterior VARCHAR(500) COLLATE database_default NULL,
+        nuevo VARCHAR(500) COLLATE database_default NULL,
+        PRIMARY KEY (id_registro, campo)
+    );
 
     WITH registros AS (
         SELECT
@@ -48,19 +48,19 @@ BEGIN
         FROM registros AS r
         CROSS APPLY (
             VALUES
-                (
-                    'id_provincia',
-                    r.id_provincia_anterior,
-                    r.id_provincia_nuevo
-                ),
-                ('id_canton', r.id_canton_anterior, r.id_canton_nuevo),
-                ('id_distrito', r.id_distrito_anterior, r.id_distrito_nuevo),
-                (
-                    'senas_exactas',
-                    r.senas_exactas_anterior,
-                    r.senas_exactas_nuevo
-                )
-        ) AS v(campo, anterior, nuevo)
+            (
+                'id_provincia',
+                r.id_provincia_anterior,
+                r.id_provincia_nuevo
+            ),
+            ('id_canton', r.id_canton_anterior, r.id_canton_nuevo),
+            ('id_distrito', r.id_distrito_anterior, r.id_distrito_nuevo),
+            (
+                'senas_exactas',
+                r.senas_exactas_anterior,
+                r.senas_exactas_nuevo
+            )
+        ) AS v (campo, anterior, nuevo)
     )
 
     INSERT INTO #cambios (id_registro, id_operacion, campo, anterior, nuevo)
@@ -95,10 +95,10 @@ BEGIN
             END;
 
         CREATE TABLE #eventos
-            (
-                id_evento BIGINT NOT NULL,
-                id_registro BIGINT NOT NULL PRIMARY KEY
-            );
+        (
+            id_evento BIGINT NOT NULL,
+            id_registro BIGINT NOT NULL PRIMARY KEY
+        );
         INSERT INTO dbo.auditoria_evento
         (
             id_entidad, id_registro_principal, id_operacion,

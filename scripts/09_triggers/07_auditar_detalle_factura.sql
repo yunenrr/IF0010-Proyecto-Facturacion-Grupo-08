@@ -77,53 +77,56 @@ BEGIN
                         FROM #eventos_insert
                         ;
                         WITH valores_insert AS (
-                            SELECT i.id_factura, v.campo, v.valor
+                            SELECT
+                                i.id_factura,
+                                v.campo,
+                                v.valor
                             FROM #insertados AS i
                             CROSS APPLY (
                                 VALUES
-                                    (
-                                        'id_producto_servicio',
-                                        CONVERT(
-                                            VARCHAR(64), i.id_producto_servicio
-                                        )
-                                    ),
-                                    (
-                                        'id_descripcion',
-                                        CONVERT(VARCHAR(64), i.id_descripcion)
-                                    ),
-                                    (
-                                        'cantidad',
-                                        CONVERT(VARCHAR(64), i.cantidad)
-                                    ),
-                                    (
-                                        'precio_unitario',
-                                        CONVERT(VARCHAR(64), i.precio_unitario)
-                                    ),
-                                    (
-                                        'porcentaje_impuesto',
-                                        CONVERT(
-                                            VARCHAR(64), i.porcentaje_impuesto
-                                        )
-                                    ),
-                                    (
-                                        'monto_descuento',
-                                        CONVERT(VARCHAR(64), i.monto_descuento)
-                                    ),
-                                    (
-                                        'subtotal_linea',
-                                        CONVERT(VARCHAR(64), i.subtotal_linea)
-                                    ),
-                                    (
-                                        'monto_impuesto',
-                                        CONVERT(VARCHAR(64), i.monto_impuesto)
-                                    ),
-                                    (
-                                        'monto_total_linea',
-                                        CONVERT(
-                                            VARCHAR(64), i.monto_total_linea
-                                        )
+                                (
+                                    'id_producto_servicio',
+                                    CONVERT(
+                                        VARCHAR(64), i.id_producto_servicio
                                     )
-                            ) AS v(campo, valor)
+                                ),
+                                (
+                                    'id_descripcion',
+                                    CONVERT(VARCHAR(64), i.id_descripcion)
+                                ),
+                                (
+                                    'cantidad',
+                                    CONVERT(VARCHAR(64), i.cantidad)
+                                ),
+                                (
+                                    'precio_unitario',
+                                    CONVERT(VARCHAR(64), i.precio_unitario)
+                                ),
+                                (
+                                    'porcentaje_impuesto',
+                                    CONVERT(
+                                        VARCHAR(64), i.porcentaje_impuesto
+                                    )
+                                ),
+                                (
+                                    'monto_descuento',
+                                    CONVERT(VARCHAR(64), i.monto_descuento)
+                                ),
+                                (
+                                    'subtotal_linea',
+                                    CONVERT(VARCHAR(64), i.subtotal_linea)
+                                ),
+                                (
+                                    'monto_impuesto',
+                                    CONVERT(VARCHAR(64), i.monto_impuesto)
+                                ),
+                                (
+                                    'monto_total_linea',
+                                    CONVERT(
+                                        VARCHAR(64), i.monto_total_linea
+                                    )
+                                )
+                            ) AS v (campo, valor)
                             WHERE i.numero_linea = @linea_insert
                         )
 
@@ -163,15 +166,15 @@ BEGIN
         END;
 
     CREATE TABLE #cambios
-        (
-            id_registro BIGINT NOT NULL,
-            numero_linea SMALLINT NOT NULL,
-            id_operacion INT NOT NULL,
-            campo VARCHAR(64) COLLATE DATABASE_DEFAULT NOT NULL,
-            anterior VARCHAR(64) COLLATE DATABASE_DEFAULT NULL,
-            nuevo VARCHAR(64) COLLATE DATABASE_DEFAULT NULL,
-            PRIMARY KEY (numero_linea, id_registro, campo)
-        );
+    (
+        id_registro BIGINT NOT NULL,
+        numero_linea SMALLINT NOT NULL,
+        id_operacion INT NOT NULL,
+        campo VARCHAR(64) COLLATE database_default NOT NULL,
+        anterior VARCHAR(64) COLLATE database_default NULL,
+        nuevo VARCHAR(64) COLLATE database_default NULL,
+        PRIMARY KEY (numero_linea, id_registro, campo)
+    );
 
     WITH registros AS (
         SELECT
@@ -224,48 +227,48 @@ BEGIN
         FROM registros AS r
         CROSS APPLY (
             VALUES
-                (
-                    'id_producto_servicio',
-                    r.id_producto_servicio_anterior,
-                    r.id_producto_servicio_nuevo
-                ),
-                (
-                    'id_descripcion',
-                    r.id_descripcion_anterior,
-                    r.id_descripcion_nuevo
-                ),
-                ('cantidad', r.cantidad_anterior, r.cantidad_nuevo),
-                (
-                    'precio_unitario',
-                    r.precio_unitario_anterior,
-                    r.precio_unitario_nuevo
-                ),
-                (
-                    'porcentaje_impuesto',
-                    r.porcentaje_impuesto_anterior,
-                    r.porcentaje_impuesto_nuevo
-                ),
-                (
-                    'monto_descuento',
-                    r.monto_descuento_anterior,
-                    r.monto_descuento_nuevo
-                ),
-                (
-                    'subtotal_linea',
-                    r.subtotal_linea_anterior,
-                    r.subtotal_linea_nuevo
-                ),
-                (
-                    'monto_impuesto',
-                    r.monto_impuesto_anterior,
-                    r.monto_impuesto_nuevo
-                ),
-                (
-                    'monto_total_linea',
-                    r.monto_total_linea_anterior,
-                    r.monto_total_linea_nuevo
-                )
-        ) AS v(campo, anterior, nuevo)
+            (
+                'id_producto_servicio',
+                r.id_producto_servicio_anterior,
+                r.id_producto_servicio_nuevo
+            ),
+            (
+                'id_descripcion',
+                r.id_descripcion_anterior,
+                r.id_descripcion_nuevo
+            ),
+            ('cantidad', r.cantidad_anterior, r.cantidad_nuevo),
+            (
+                'precio_unitario',
+                r.precio_unitario_anterior,
+                r.precio_unitario_nuevo
+            ),
+            (
+                'porcentaje_impuesto',
+                r.porcentaje_impuesto_anterior,
+                r.porcentaje_impuesto_nuevo
+            ),
+            (
+                'monto_descuento',
+                r.monto_descuento_anterior,
+                r.monto_descuento_nuevo
+            ),
+            (
+                'subtotal_linea',
+                r.subtotal_linea_anterior,
+                r.subtotal_linea_nuevo
+            ),
+            (
+                'monto_impuesto',
+                r.monto_impuesto_anterior,
+                r.monto_impuesto_nuevo
+            ),
+            (
+                'monto_total_linea',
+                r.monto_total_linea_anterior,
+                r.monto_total_linea_nuevo
+            )
+        ) AS v (campo, anterior, nuevo)
     )
 
     INSERT INTO #cambios (

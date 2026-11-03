@@ -10,14 +10,14 @@ BEGIN
     -- Audita INSERT, UPDATE y DELETE, incluidas sentencias de varias filas.
 
     CREATE TABLE #cambios
-        (
-            id_registro BIGINT NOT NULL,
-            id_operacion INT NOT NULL,
-            campo VARCHAR(128) COLLATE DATABASE_DEFAULT NOT NULL,
-            anterior VARCHAR(254) COLLATE DATABASE_DEFAULT NULL,
-            nuevo VARCHAR(254) COLLATE DATABASE_DEFAULT NULL,
-            PRIMARY KEY (id_registro, campo)
-        );
+    (
+        id_registro BIGINT NOT NULL,
+        id_operacion INT NOT NULL,
+        campo VARCHAR(128) COLLATE database_default NOT NULL,
+        anterior VARCHAR(254) COLLATE database_default NULL,
+        nuevo VARCHAR(254) COLLATE database_default NULL,
+        PRIMARY KEY (id_registro, campo)
+    );
 
     WITH registros AS (
         SELECT
@@ -61,34 +61,34 @@ BEGIN
         FROM registros AS r
         CROSS APPLY (
             VALUES
-                (
-                    'id_direccion',
-                    r.id_direccion_anterior,
-                    r.id_direccion_nuevo
-                ),
-                (
-                    'id_tipo_persona',
-                    r.id_tipo_persona_anterior,
-                    r.id_tipo_persona_nuevo
-                ),
-                ('cedula', r.cedula_anterior, r.cedula_nuevo),
-                ('telefono', r.telefono_anterior, r.telefono_nuevo),
-                (
-                    'correo_electronico',
-                    r.correo_electronico_anterior,
-                    r.correo_electronico_nuevo
-                ),
-                (
-                    'fecha_registro',
-                    r.fecha_registro_anterior,
-                    r.fecha_registro_nuevo
-                ),
-                (
-                    'fecha_ultima_actualizacion',
-                    r.fecha_ultima_actualizacion_anterior,
-                    r.fecha_ultima_actualizacion_nuevo
-                )
-        ) AS v(campo, anterior, nuevo)
+            (
+                'id_direccion',
+                r.id_direccion_anterior,
+                r.id_direccion_nuevo
+            ),
+            (
+                'id_tipo_persona',
+                r.id_tipo_persona_anterior,
+                r.id_tipo_persona_nuevo
+            ),
+            ('cedula', r.cedula_anterior, r.cedula_nuevo),
+            ('telefono', r.telefono_anterior, r.telefono_nuevo),
+            (
+                'correo_electronico',
+                r.correo_electronico_anterior,
+                r.correo_electronico_nuevo
+            ),
+            (
+                'fecha_registro',
+                r.fecha_registro_anterior,
+                r.fecha_registro_nuevo
+            ),
+            (
+                'fecha_ultima_actualizacion',
+                r.fecha_ultima_actualizacion_anterior,
+                r.fecha_ultima_actualizacion_nuevo
+            )
+        ) AS v (campo, anterior, nuevo)
     )
 
     INSERT INTO #cambios (id_registro, id_operacion, campo, anterior, nuevo)
@@ -123,10 +123,10 @@ BEGIN
             END;
 
         CREATE TABLE #eventos
-            (
-                id_evento BIGINT NOT NULL,
-                id_registro BIGINT NOT NULL PRIMARY KEY
-            );
+        (
+            id_evento BIGINT NOT NULL,
+            id_registro BIGINT NOT NULL PRIMARY KEY
+        );
         INSERT INTO dbo.auditoria_evento
         (
             id_entidad, id_registro_principal, id_operacion,

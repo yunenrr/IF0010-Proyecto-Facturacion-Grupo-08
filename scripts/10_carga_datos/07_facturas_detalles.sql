@@ -34,7 +34,7 @@ BEGIN
             SELECT d.valor
             FROM
                 (VALUES (0), (1), (2), (3), (4), (5), (6), (7), (8), (9))
-                    AS d (valor)
+                    AS d(valor)
         )
 
         SELECT
@@ -196,7 +196,7 @@ BEGIN
                         ) AS subtotal_linea
                     FROM #cabeceras AS c
                     CROSS JOIN
-                        (VALUES (1), (2), (3), (4), (5)) AS l (numero_linea)
+                        (VALUES (1), (2), (3), (4), (5)) AS l(numero_linea)
                     INNER JOIN
                         #catalogo AS p
                         ON

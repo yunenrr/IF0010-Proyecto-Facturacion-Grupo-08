@@ -34,7 +34,7 @@ BEGIN
             SELECT d.valor
             FROM
                 (VALUES (0), (1), (2), (3), (4), (5), (6), (7), (8), (9))
-                    AS d(valor)
+                    AS d (valor)
         )
 
         SELECT
@@ -118,7 +118,7 @@ BEGIN
         CREATE UNIQUE CLUSTERED INDEX ix_catalogo ON #catalogo (numero);
         -- Lotes moderados limitan memoria, ordenamientos y log por transaccion.
         -- Cada lote confirma sus facturas, detalles y auditoria juntos.
-        DECLARE @tamano_lote INT = 5000;
+        DECLARE @tamano_lote INT = 20000;
         DECLARE @desde INT = 1;
         DECLARE @cargadas INT;
         WHILE @desde <= 500000
@@ -196,7 +196,7 @@ BEGIN
                         ) AS subtotal_linea
                     FROM #cabeceras AS c
                     CROSS JOIN
-                        (VALUES (1), (2), (3), (4), (5)) AS l(numero_linea)
+                        (VALUES (1), (2), (3), (4), (5)) AS l (numero_linea)
                     INNER JOIN
                         #catalogo AS p
                         ON
@@ -320,7 +320,7 @@ BEGIN
                 COMMIT TRANSACTION;
                 SET @desde += @tamano_lote;
                 SET @cargadas = @desde - 1;
-                IF @cargadas % 25000 = 0
+                IF @cargadas % @tamano_lote = 0
                     RAISERROR (
                         'Facturas cargadas y auditadas: %d de 500000.',
                         10, 1, @cargadas

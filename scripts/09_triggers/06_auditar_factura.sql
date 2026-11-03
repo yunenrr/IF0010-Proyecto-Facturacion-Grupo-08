@@ -25,7 +25,7 @@ BEGIN
                         VALUES (@nombre_insert);
                         SET @usuario_insert = SCOPE_IDENTITY();
                     END;
-                DECLARE @eventos_insert TABLE (
+                CREATE TABLE #eventos_insert (
                     id_evento BIGINT NOT NULL,
                     id_registro BIGINT NOT NULL PRIMARY KEY
                 );
@@ -52,7 +52,7 @@ BEGIN
                     id_usuario, fecha_hora_cambio
                 )
                 OUTPUT INSERTED.id_evento, INSERTED.id_registro_principal
-                INTO @eventos_insert
+                INTO #eventos_insert
                 SELECT
                     1 AS id_entidad,
                     i.id_factura,
@@ -141,7 +141,7 @@ BEGIN
                     FROM #facturas_insertadas AS i
                 )
 
-                INSERT INTO dbo.auditoria_valor (
+                INSERT INTO dbo.auditoria_valor WITH (TABLOCK) (
                     id_evento, id_campo, id_momento, valor
                 )
                 SELECT
@@ -150,9 +150,10 @@ BEGIN
                     2 AS id_momento,
                     v.valor
                 FROM valores_insert AS v
-                INNER JOIN @eventos_insert AS e ON v.id_factura = e.id_registro
+                INNER JOIN #eventos_insert AS e ON v.id_factura = e.id_registro
                 INNER JOIN dbo.campo_auditoria AS a
-                    ON a.id_entidad = 1 AND v.campo = a.nombre;
+                    ON a.id_entidad = 1 AND v.campo = a.nombre
+                ORDER BY e.id_evento, a.id_campo;
                 COMMIT TRANSACTION;
             END TRY
             BEGIN CATCH

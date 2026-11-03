@@ -117,6 +117,7 @@ BEGIN
         CREATE UNIQUE CLUSTERED INDEX ix_clientes ON #clientes (numero);
         CREATE UNIQUE CLUSTERED INDEX ix_catalogo ON #catalogo (numero);
         DECLARE @desde INT = 1;
+        DECLARE @cargadas INT;
         WHILE @desde <= 500000
             BEGIN
                 BEGIN TRANSACTION;
@@ -158,7 +159,7 @@ BEGIN
                 INNER JOIN
                     #clientes AS c
                     ON c.numero = (n.numero - 1) % 50000 + 1
-                WHERE n.numero BETWEEN @desde AND @desde + 9999;
+                WHERE n.numero BETWEEN @desde AND @desde + 19999;
                 SELECT
                     p.numero,
                     p.id_empresa,
@@ -174,46 +175,55 @@ BEGIN
                 INNER JOIN
                     dbo.tipo_documento AS t
                     ON p.id_tipo_documento = t.id_tipo_documento;
-                SELECT
-                    c.numero,
-                    l.numero_linea,
-                    p.id_producto_servicio,
-                    p.id_descripcion,
-                    CAST(
-                        1 + (c.numero + l.numero_linea) % 4 AS DECIMAL(18, 4)
-                    ) AS cantidad,
-                    p.precio_unitario_lista AS precio_unitario,
-                    p.porcentaje_impuesto,
-                    CAST(
-                        (1 + (c.numero + l.numero_linea) % 4)
-                        * p.precio_unitario_lista AS DECIMAL(19, 4)
-                    ) AS subtotal_linea
-                INTO #bases FROM #cabeceras AS c
-                CROSS JOIN (VALUES (1), (2), (3), (4), (5)) AS l(numero_linea)
-                INNER JOIN
-                    #catalogo AS p
-                    ON
-                        p.numero
-                        = ((c.numero - 1) * 5 + l.numero_linea - 1) % 1100 + 1
-                WHERE l.numero_linea <= 3 + (c.numero - 1) % 3;
-                SELECT
-                    b.numero,
-                    b.numero_linea,
-                    b.id_producto_servicio,
-                    b.id_descripcion,
-                    b.cantidad,
-                    b.precio_unitario,
-                    b.porcentaje_impuesto,
-                    b.subtotal_linea,
-                    CAST(
-                        CASE
-                            WHEN
-                                (b.numero + b.numero_linea) % 10 = 0
-                                THEN b.subtotal_linea * 0.05
-                            ELSE 0
-                        END AS DECIMAL(19, 4)
-                    ) AS descuento
-                INTO #descuentos FROM #bases AS b;
+                WITH bases AS (
+                    SELECT
+                        c.numero,
+                        l.numero_linea,
+                        p.id_producto_servicio,
+                        p.id_descripcion,
+                        CAST(
+                            1
+                            + (c.numero + l.numero_linea) % 4 AS DECIMAL(18, 4)
+                        ) AS cantidad,
+                        p.precio_unitario_lista AS precio_unitario,
+                        p.porcentaje_impuesto,
+                        CAST(
+                            (1 + (c.numero + l.numero_linea) % 4)
+                            * p.precio_unitario_lista AS DECIMAL(19, 4)
+                        ) AS subtotal_linea
+                    FROM #cabeceras AS c
+                    CROSS JOIN
+                        (VALUES (1), (2), (3), (4), (5)) AS l(numero_linea)
+                    INNER JOIN
+                        #catalogo AS p
+                        ON
+                            p.numero
+                            = ((c.numero - 1) * 5 + l.numero_linea - 1) % 1100
+                            + 1
+                    WHERE l.numero_linea <= 3 + (c.numero - 1) % 3
+                ),
+                                
+                descuentos AS (
+                    SELECT
+                        b.numero,
+                        b.numero_linea,
+                        b.id_producto_servicio,
+                        b.id_descripcion,
+                        b.cantidad,
+                        b.precio_unitario,
+                        b.porcentaje_impuesto,
+                        b.subtotal_linea,
+                        CAST(
+                            CASE
+                                WHEN
+                                    (b.numero + b.numero_linea) % 10 = 0
+                                    THEN b.subtotal_linea * 0.05
+                                ELSE 0
+                            END AS DECIMAL(19, 4)
+                        ) AS descuento
+                    FROM bases AS b
+                )
+
                 SELECT
                     d.numero,
                     d.numero_linea,
@@ -232,7 +242,7 @@ BEGIN
                             4
                         ) AS DECIMAL(19, 4)
                     ) AS impuesto
-                INTO #lineas FROM #descuentos AS d;
+                INTO #lineas FROM descuentos AS d;
                 SELECT TOP (0)
                     CAST(id_factura AS BIGINT) AS id_factura,
                     identificador_comprobante
@@ -240,7 +250,7 @@ BEGIN
                 FROM dbo.factura;
                 CREATE UNIQUE CLUSTERED INDEX ix_facturas_lote
                     ON #facturas_lote (identificador_comprobante);
-                INSERT INTO dbo.factura (
+                INSERT INTO dbo.factura WITH (TABLOCK) (
                     identificador_comprobante, id_empresa, id_cliente,
                     id_tipo_documento, id_moneda, id_estado, fecha_emision,
                     subtotal, total_descuentos, total_impuestos, monto_total,
@@ -271,7 +281,7 @@ BEGIN
                     c.id_cliente,
                     c.id_tipo_documento,
                     c.id_moneda, c.id_estado, c.fecha_emision;
-                INSERT INTO dbo.detalle_factura (
+                INSERT INTO dbo.detalle_factura WITH (TABLOCK) (
                     id_factura, numero_linea, id_producto_servicio,
                     id_descripcion,
                     cantidad,
@@ -298,15 +308,20 @@ BEGIN
                     + l.impuesto AS monto_total_linea
                 FROM #cabeceras AS c INNER JOIN #facturas_lote AS f
                     ON c.comprobante = f.identificador_comprobante
-                INNER JOIN #lineas AS l ON c.numero = l.numero;
+                INNER JOIN #lineas AS l ON c.numero = l.numero
+                ORDER BY f.id_factura, l.numero_linea;
                 DROP TABLE #facturas_lote;
                 DROP TABLE #lineas;
-                DROP TABLE #descuentos;
-                DROP TABLE #bases;
                 DROP TABLE #cabeceras;
                 DROP TABLE #plan;
                 COMMIT TRANSACTION;
-                SET @desde += 10000;
+                SET @desde += 20000;
+                SET @cargadas = @desde - 1;
+                IF @cargadas % 100000 = 0
+                    RAISERROR (
+                        'Facturas cargadas y auditadas: %d de 500000.',
+                        10, 1, @cargadas
+                    ) WITH NOWAIT;
             END;
 
     END TRY

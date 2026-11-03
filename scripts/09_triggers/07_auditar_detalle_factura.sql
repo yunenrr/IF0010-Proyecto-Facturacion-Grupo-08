@@ -25,7 +25,7 @@ BEGIN
                         VALUES (@nombre_insert);
                         SET @usuario_insert = SCOPE_IDENTITY();
                     END;
-                DECLARE @eventos_insert TABLE (
+                CREATE TABLE #eventos_insert (
                     id_evento BIGINT NOT NULL,
                     id_registro BIGINT NOT NULL PRIMARY KEY
                 );
@@ -51,14 +51,14 @@ BEGIN
                 FETCH NEXT FROM insercion_cursor INTO @linea_insert;
                 WHILE @@FETCH_STATUS = 0
                     BEGIN
-                        DELETE FROM @eventos_insert;
+                        DELETE FROM #eventos_insert;
                         INSERT INTO dbo.auditoria_evento (
                             id_entidad, id_registro_principal, id_operacion,
                             id_usuario, fecha_hora_cambio
                         )
                         OUTPUT
                             INSERTED.id_evento, INSERTED.id_registro_principal
-                        INTO @eventos_insert
+                        INTO #eventos_insert
                         SELECT
                             2 AS id_entidad,
                             i.id_factura,
@@ -73,7 +73,7 @@ BEGIN
                         SELECT
                             id_evento,
                             @linea_insert AS numero_linea
-                        FROM @eventos_insert
+                        FROM #eventos_insert
                         ;
                         WITH valores_insert AS (
                             SELECT
@@ -143,7 +143,7 @@ BEGIN
                             WHERE i.numero_linea = @linea_insert
                         )
 
-                        INSERT INTO dbo.auditoria_valor (
+                        INSERT INTO dbo.auditoria_valor WITH (TABLOCK) (
                             id_evento, id_campo, id_momento, valor
                         )
                         SELECT
@@ -153,10 +153,11 @@ BEGIN
                             v.valor
                         FROM valores_insert AS v
                         INNER JOIN
-                            @eventos_insert AS e
+                            #eventos_insert AS e
                             ON v.id_factura = e.id_registro
                         INNER JOIN dbo.campo_auditoria AS a
-                            ON a.id_entidad = 2 AND v.campo = a.nombre;
+                            ON a.id_entidad = 2 AND v.campo = a.nombre
+                        ORDER BY e.id_evento, a.id_campo;
                         FETCH NEXT FROM insercion_cursor INTO @linea_insert;
                     END;
                 CLOSE insercion_cursor;

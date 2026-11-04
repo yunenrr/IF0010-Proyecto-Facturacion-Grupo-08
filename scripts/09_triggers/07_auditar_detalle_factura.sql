@@ -95,9 +95,6 @@ BEGIN
                             @linea_insert AS numero_linea
                         FROM #eventos_insert
                         ;
-                        INSERT INTO dbo.auditoria_valor WITH (TABLOCK) (
-                            id_evento, id_campo, id_momento, valor
-                        )
                         SELECT
                             e.id_evento,
                             c.id_campo,
@@ -138,14 +135,26 @@ BEGIN
                                             VARCHAR(64), i.monto_total_linea
                                         )
                             END AS valor
+                        INTO #valores_insert
                         FROM #eventos_insert AS e
                         INNER JOIN #insertados AS i
                             ON
                                 e.id_registro = i.id_factura
                                 AND i.numero_linea = @linea_insert
-                        CROSS JOIN #campos_insert AS c
-                        ORDER BY e.id_evento, c.id_campo
-                        OPTION (FORCE ORDER, LOOP JOIN, MAXDOP 1);
+                        CROSS JOIN #campos_insert AS c;
+                        CREATE UNIQUE CLUSTERED INDEX ix_valores_insert
+                            ON #valores_insert (id_evento, id_campo);
+                        INSERT INTO dbo.auditoria_valor WITH (TABLOCK) (
+                            id_evento, id_campo, id_momento, valor
+                        )
+                        SELECT
+                            id_evento,
+                            id_campo,
+                            id_momento,
+                            valor
+                        FROM #valores_insert
+                        ORDER BY id_evento, id_campo;
+                        DROP TABLE #valores_insert;
                         FETCH NEXT FROM insercion_cursor INTO @linea_insert;
                     END;
                 CLOSE insercion_cursor;

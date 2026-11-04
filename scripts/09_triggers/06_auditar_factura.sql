@@ -84,6 +84,9 @@ BEGIN
                     @usuario_insert AS id_usuario,
                     @fecha_insert AS fecha_hora_cambio
                 FROM #facturas_insertadas AS i;
+                INSERT INTO dbo.auditoria_valor WITH (TABLOCK) (
+                    id_evento, id_campo, id_momento, valor
+                )
                 SELECT
                     e.id_evento,
                     c.id_campo,
@@ -110,24 +113,12 @@ BEGIN
                             13
                             THEN CONVERT(VARCHAR(64), i.fecha_modificacion, 126)
                     END AS valor
-                INTO #valores_insert
                 FROM #eventos_insert AS e
                 INNER JOIN #facturas_insertadas AS i
                     ON e.id_registro = i.id_factura
-                CROSS JOIN #campos_insert AS c;
-                CREATE UNIQUE CLUSTERED INDEX ix_valores_insert
-                    ON #valores_insert (id_evento, id_campo);
-                INSERT INTO dbo.auditoria_valor WITH (TABLOCK) (
-                    id_evento, id_campo, id_momento, valor
-                )
-                SELECT
-                    id_evento,
-                    id_campo,
-                    id_momento,
-                    valor
-                FROM #valores_insert
-                ORDER BY id_evento, id_campo;
-                DROP TABLE #valores_insert;
+                CROSS JOIN #campos_insert AS c
+                ORDER BY e.id_evento, c.id_campo
+                OPTION (FORCE ORDER, LOOP JOIN, MAXDOP 1);
                 COMMIT TRANSACTION;
             END TRY
             BEGIN CATCH
